@@ -72,32 +72,51 @@ function shade(hex, pct) {
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
-// ─────────── BAR ILLUSTRATION (placeholder hero) ───────────
+// ─────────── BAR HERO ───────────
 const BarHero = ({ bar, height = 180, small = false }) => {
-  // Abstract generative header — dots + stripe + bar icon
   const iconMap = { ostal: 'wine', pignom: 'beer', 'arriere-cour': 'cocktail' };
   const icon = iconMap[bar.id] || 'wine';
+
+  const containerStyle = bar.image ? {
+    height, width: '100%',
+    backgroundImage: `url(${bar.image})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    position: 'relative', overflow: 'hidden',
+    borderRadius: small ? 14 : 0,
+  } : {
+    height, width: '100%',
+    background: `linear-gradient(135deg, ${bar.color}, ${bar.accent})`,
+    position: 'relative', overflow: 'hidden',
+    borderRadius: small ? 14 : 0,
+  };
+
   return (
-    <div style={{
-      height, width: '100%',
-      background: `linear-gradient(135deg, ${bar.color}, ${bar.accent})`,
-      position: 'relative', overflow: 'hidden',
-      borderRadius: small ? 14 : 0,
-    }}>
-      {/* dot pattern */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }}>
-        <defs>
-          <pattern id={`dots-${bar.id}`} width="14" height="14" patternUnits="userSpaceOnUse">
-            <circle cx="2" cy="2" r="1.2" fill="#fff"/>
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill={`url(#dots-${bar.id})`}/>
-      </svg>
-      {/* sweeping curve */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="none" viewBox="0 0 400 200">
-        <path d={`M0,${height * 0.7} Q200,${height * 0.3} 400,${height * 0.8} L400,200 L0,200 Z`}
-          fill="rgba(255,255,255,0.12)" />
-      </svg>
+    <div style={containerStyle}>
+      {bar.image ? (
+        /* photo overlay */
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.62) 100%)',
+        }}/>
+      ) : (
+        <>
+          {/* dot pattern */}
+          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }}>
+            <defs>
+              <pattern id={`dots-${bar.id}`} width="14" height="14" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1.2" fill="#fff"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill={`url(#dots-${bar.id})`}/>
+          </svg>
+          {/* sweeping curve */}
+          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="none" viewBox="0 0 400 200">
+            <path d={`M0,${height * 0.7} Q200,${height * 0.3} 400,${height * 0.8} L400,200 L0,200 Z`}
+              fill="rgba(255,255,255,0.12)" />
+          </svg>
+        </>
+      )}
       {/* glyph */}
       <div style={{
         position: 'absolute', right: small ? 10 : 20, bottom: small ? 10 : 20,
@@ -116,10 +135,10 @@ const BarHero = ({ bar, height = 180, small = false }) => {
           position: 'absolute', left: 20, bottom: 20, right: 100,
           color: '#fff',
         }}>
-          <div className="serif" style={{ fontSize: 32, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.01em' }}>
+          <div className="serif" style={{ fontSize: 32, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.01em', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
             {bar.name}
           </div>
-          <div style={{ fontSize: 13, marginTop: 6, opacity: 0.92, fontStyle: 'italic' }}>
+          <div style={{ fontSize: 13, marginTop: 6, opacity: 0.92, fontStyle: 'italic', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
             {bar.tagline}
           </div>
         </div>

@@ -1,3 +1,7 @@
+import ostalImg from '../assets/bars/ostal.jpg'
+import pignomImg from '../assets/bars/pignom.jpg'
+import arriereCourtImg from '../assets/bars/arriere-cour.jpg'
+
 export const BARS_DATA = [
   {
     id: 'ostal',
@@ -12,6 +16,7 @@ export const BARS_DATA = [
     reviews: 187,
     priceLevel: "€€",
     tags: ["Brasserie", "Cocktails", "Tapas"],
+    image: ostalImg,
     color: "#C65D3D",
     accent: "#E89579",
     hours: {
@@ -43,6 +48,7 @@ export const BARS_DATA = [
     reviews: 243,
     priceLevel: "€",
     tags: ["Bières", "Sport", "Restauration"],
+    image: pignomImg,
     color: "#6B3A4A",
     accent: "#A8637A",
     hours: {
@@ -74,6 +80,7 @@ export const BARS_DATA = [
     reviews: 124,
     priceLevel: "€€",
     tags: ["Cocktails", "Tapas", "Brunch"],
+    image: arriereCourtImg,
     color: "#D9A44A",
     accent: "#E8C078",
     hours: {
