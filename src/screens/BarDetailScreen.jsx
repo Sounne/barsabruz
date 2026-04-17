@@ -1,12 +1,15 @@
 import React from 'react'
 import { BARS_DATA } from '../data'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 
 // Bar detail screen
 
 const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
   const bar = BARS_DATA.find(b => b.id === barId);
   const [fav, setFav] = React.useState(false);
+  const now = useCurrentTime();
+  const status = getBarStatus(bar, now);
   const days = [
     ['Lundi', 'Mon'], ['Mardi', 'Tue'], ['Mercredi', 'Wed'],
     ['Jeudi', 'Thu'], ['Vendredi', 'Fri'], ['Samedi', 'Sat'], ['Dimanche', 'Sun']
@@ -51,9 +54,9 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
         boxShadow: '0 -4px 20px rgba(42,31,23,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <OpenDot open={bar.openNow}/>
-          <span style={{ fontSize: 12, fontWeight: 600, color: bar.openNow ? 'var(--success)' : 'var(--ink-mute)' }}>
-            {bar.openNow ? `Ouvert · ferme dans ${bar.closesIn}` : bar.opensIn}
+          <OpenDot open={status.openNow}/>
+          <span style={{ fontSize: 12, fontWeight: 600, color: status.openNow ? 'var(--success)' : 'var(--ink-mute)' }}>
+            {status.openNow ? `Ouvert · ferme dans ${status.closesIn}` : status.opensIn}
           </span>
           <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-mute)' }}/>
           <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>

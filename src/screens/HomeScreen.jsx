@@ -1,6 +1,7 @@
 import React from 'react'
 import { BARS_DATA, ANNONCES_PUBLIC } from '../data'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 
 // Screens: Home, Discover, Bar Detail
 
@@ -13,8 +14,10 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
     ? allBars.filter(b => b.name.toLowerCase().includes(search.toLowerCase()) || b.tagline.toLowerCase().includes(search.toLowerCase()) || b.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
     : allBars;
   const publics = ANNONCES_PUBLIC;
-  const now = new Date();
-  const greeting = now.getHours() < 18 ? "Bon après-midi" : "Bonsoir";
+  const now = useCurrentTime();
+  const barStatus = bar => getBarStatus(bar, now);
+  const h = now.getHours();
+  const greeting = h < 6 ? "Bonne nuit" : h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir";
 
   // Aggregate upcoming events
   const upcoming = bars.flatMap(b => b.events.map(e => ({...e, bar: b}))).slice(0, 5);
@@ -76,13 +79,13 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
                 background: 'rgba(255,255,255,0.95)', borderRadius: 999,
                 padding: '4px 9px', fontSize: 11, fontWeight: 600,
                 display: 'flex', alignItems: 'center', gap: 5,
-                color: bar.openNow ? 'var(--success)' : 'var(--ink-mute)',
+                color: barStatus(bar).openNow ? 'var(--success)' : 'var(--ink-mute)',
               }}>
                 <span style={{
                   width: 6, height: 6, borderRadius: '50%',
-                  background: bar.openNow ? 'var(--success)' : 'var(--ink-mute)',
+                  background: barStatus(bar).openNow ? 'var(--success)' : 'var(--ink-mute)',
                 }}/>
-                {bar.openNow ? `Ouvert · ferme dans ${bar.closesIn}` : bar.opensIn}
+                {barStatus(bar).openNow ? `Ouvert · ferme dans ${barStatus(bar).closesIn}` : barStatus(bar).opensIn}
               </div>
             </div>
             <div style={{ padding: 12 }}>
@@ -205,6 +208,8 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
 // ═══════════════ DISCOVER (LIST + MAP TOGGLE) ═══════════════
 const DiscoverScreen = ({ onOpenBar }) => {
   const [view, setView] = React.useState('list');
+  const now = useCurrentTime();
+  const barStatus = bar => getBarStatus(bar, now);
   const bars = BARS_DATA;
   return (
     <div style={{ paddingBottom: 100 }}>
@@ -252,12 +257,12 @@ const DiscoverScreen = ({ onOpenBar }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <OpenDot open={bar.openNow}/>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: bar.openNow ? 'var(--success)' : 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        {bar.openNow ? 'Ouvert' : 'Fermé'}
+                      <OpenDot open={barStatus(bar).openNow}/>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: barStatus(bar).openNow ? 'var(--success)' : 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {barStatus(bar).openNow ? 'Ouvert' : 'Fermé'}
                       </span>
                       <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>
-                        {bar.openNow ? `· ferme à ${bar.hours[Object.keys(bar.hours)[3]]?.split('–')[1]?.trim()}` : `· ${bar.opensIn}`}
+                        {barStatus(bar).openNow ? `· ferme à ${barStatus(bar).closesAt}` : `· ${barStatus(bar).opensIn}`}
                       </span>
                     </div>
                     <div className="serif" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{bar.name}</div>
@@ -295,6 +300,8 @@ const DiscoverScreen = ({ onOpenBar }) => {
 const MapView = ({ bars, onOpenBar }) => {
   const [selected, setSelected] = React.useState(bars[0].id);
   const sel = bars.find(b => b.id === selected);
+  const now = useCurrentTime();
+  const barStatus = bar => getBarStatus(bar, now);
   // Fake map with a stylized grid
   return (
     <div style={{ padding: '0 20px' }}>
@@ -379,8 +386,8 @@ const MapView = ({ bars, onOpenBar }) => {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="serif" style={{ fontSize: 16, fontWeight: 600 }}>{sel.name}</div>
             <div style={{ fontSize: 11, color: 'var(--ink-mute)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <OpenDot open={sel.openNow}/>
-              {sel.openNow ? 'Ouvert' : 'Fermé'} · {sel.distance}
+              <OpenDot open={barStatus(sel).openNow}/>
+              {barStatus(sel).openNow ? 'Ouvert' : 'Fermé'} · {sel.distance}
             </div>
           </div>
           <Icon name="chevron" size={16} color="var(--ink-mute)"/>

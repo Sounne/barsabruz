@@ -23,8 +23,6 @@ export const BARS_DATA = [
       Sat: "10:00 – 21:00",
       Sun: "09:00 – 14:00",
     },
-    openNow: true,
-    closesIn: "2h12",
     specialties: ["Cocktails maison", "Bières artisanales", "Cuisine de saison"],
     events: [
       { id: 'e1', title: "Soirée dégustation — vins du Languedoc", date: "Ven. 25 avril", time: "19:30", price: "15€", tag: "Dégustation", attending: 34 },
@@ -56,8 +54,6 @@ export const BARS_DATA = [
       Sat: "10:00 – 14:30  ·  17:00 – 01:00",
       Sun: null,
     },
-    openNow: true,
-    closesIn: "3h45",
     specialties: ["Bières pression", "Entrecôte", "Croque-monsieur"],
     events: [
       { id: 'e4', title: "Quiz du mercredi — spécial 90s", date: "Mer. 23 avril", time: "21:00", price: "Gratuit", tag: "Quiz", attending: 42 },
@@ -89,8 +85,6 @@ export const BARS_DATA = [
       Sat: "17:30 – 01:00",
       Sun: "11:00 – 14:30  ·  17:30 – 23:00",
     },
-    openNow: false,
-    opensIn: "Demain 17:30",
     specialties: ["Cocktails signature", "Tapas", "Brunch dominical"],
     events: [
       { id: 'e7', title: "Jeudi acoustique — Lou & les Garçons", date: "Jeu. 24 avril", time: "20:00", price: "Gratuit", tag: "Live", attending: 47 },
