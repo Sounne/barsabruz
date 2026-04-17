@@ -34,6 +34,7 @@ const Icon = ({ name, size = 20, color = 'currentColor', stroke = 1.8 }) => {
     flame: <><path d="M12 3c0 4-5 5-5 10a5 5 0 0010 0c0-2-1-3-2-4 0 2-1 3-2 3 0-3 2-4-1-9z"/></>,
     check: <><path d="M5 12l4 4 10-10"/></>,
     ticket: <><path d="M3 9a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4V9z"/><path d="M12 7v10" strokeDasharray="2 2"/></>,
+    phone: <><path d="M5 4h4l2 5-3 2a16 16 0 006 6l2-3 5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></>,
     filter: <><path d="M3 5h18l-7 9v5l-4 2v-7L3 5z"/></>,
     map: <><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></>,
     list: <><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1" fill={color} stroke="none"/><circle cx="4" cy="12" r="1" fill={color} stroke="none"/><circle cx="4" cy="18" r="1" fill={color} stroke="none"/></>,

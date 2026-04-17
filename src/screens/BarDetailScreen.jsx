@@ -126,19 +126,47 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
         </div>
       </div>
 
-      {/* Adresse */}
+      {/* Adresse + Contacts */}
       <div style={{ padding: '10px 16px 0' }}>
         <div style={{
-          background: '#fff', borderRadius: 16, padding: 14,
-          boxShadow: 'var(--shadow-card)',
-          display: 'flex', alignItems: 'center', gap: 10,
+          background: '#fff', borderRadius: 16,
+          boxShadow: 'var(--shadow-card)', overflow: 'hidden',
         }}>
-          <Icon name="pin" size={18} color={bar.color}/>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Adresse</div>
-            <div style={{ fontSize: 14, marginTop: 2 }}>{bar.address}</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>À {bar.distance}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, borderBottom: '1px solid var(--line)' }}>
+            <Icon name="pin" size={18} color={bar.color}/>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Adresse</div>
+              <div style={{ fontSize: 14, marginTop: 2 }}>{bar.address}</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>À {bar.distance}</div>
+            </div>
           </div>
+          {bar.phone && (
+            <a href={`tel:${bar.phone}`} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: 14,
+              borderBottom: bar.website ? '1px solid var(--line)' : 'none',
+              textDecoration: 'none', color: 'inherit',
+            }}>
+              <Icon name="phone" size={18} color={bar.color}/>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Téléphone</div>
+                <div style={{ fontSize: 14, marginTop: 2 }}>{bar.phone}</div>
+              </div>
+              <Icon name="chevron" size={14} color="var(--ink-mute)"/>
+            </a>
+          )}
+          {bar.website && (
+            <a href={bar.website} target="_blank" rel="noopener noreferrer" style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: 14,
+              textDecoration: 'none', color: 'inherit',
+            }}>
+              <Icon name="globe" size={18} color={bar.color}/>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Site web</div>
+                <div style={{ fontSize: 14, marginTop: 2 }}>{bar.website.replace('https://', '')}</div>
+              </div>
+              <Icon name="chevron" size={14} color="var(--ink-mute)"/>
+            </a>
+          )}
         </div>
       </div>
 
