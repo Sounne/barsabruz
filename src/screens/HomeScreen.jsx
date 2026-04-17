@@ -205,7 +205,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
 // ═══════════════ DISCOVER (LIST + MAP TOGGLE) ═══════════════
 const DiscoverScreen = ({ onOpenBar }) => {
   const [view, setView] = React.useState('list');
-  const bars = window.BARS_DATA;
+  const bars = BARS_DATA;
   return (
     <div style={{ paddingBottom: 100 }}>
       <div style={{ padding: '16px 20px 12px' }}>
