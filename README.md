@@ -1,17 +1,28 @@
-# Bars à Bruz — GitHub Pages
+# Bars à Bruz
 
-Site vitrine des bars de Bruz (prototype mobile).
+Site vitrine des bars de Bruz (prototype mobile) — React + Vite, déployé sur GitHub Pages.
 
-## Mise en ligne
+## Développement local
 
-1. Crée un repo GitHub (ex. `bars-a-bruz`)
-2. Uploade le contenu de ce dossier à la racine du repo
-3. Va dans **Settings → Pages**
-4. Source : `Deploy from a branch`, branche `main`, dossier `/ (root)`
-5. Clique **Save** — l'URL apparaît en haut de la page (`https://<username>.github.io/bars-a-bruz/`)
+```bash
+npm install
+npm run dev       # http://localhost:5173/barsabruz/
+```
 
-Le site est un fichier HTML unique et autonome, aucune dépendance externe à installer.
+## Structure
 
-## Mise à jour
+```
+src/
+├── data/index.js          # Données des bars (à éditer pour ajouter/modifier des bars)
+├── components/ui.jsx      # Primitives UI partagées (icônes, cartes, etc.)
+├── screens/               # Un fichier par écran
+└── App.jsx                # Navigation principale
+```
 
-Remplace simplement `index.html` par une nouvelle version et commit. GitHub Pages se met à jour en 1-2 minutes.
+## Déploiement
+
+GitHub Actions build automatiquement à chaque push sur `main` et déploie sur GitHub Pages.
+
+URL : `https://sounne.github.io/barsabruz/`
+
+Pour mettre à jour les données des bars, modifier `src/data/index.js` et pusher.

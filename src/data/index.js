@@ -1,0 +1,105 @@
+// Mock data for Bars à Bruz
+export const BARS_DATA = [
+  {
+    id: 'ostal',
+    name: "L'Ostal",
+    tagline: "Cave à vins & tapas",
+    description: "Bar à vins chaleureux au cœur de Bruz. Planches de charcuterie, tapas maison et sélection pointue de vins naturels. L'adresse des amateurs de bons produits.",
+    address: "12 rue Alphonse Milon, 35170 Bruz",
+    distance: "0.4 km",
+    rating: 4.6,
+    reviews: 187,
+    priceLevel: "€€",
+    tags: ["Vins naturels", "Tapas", "Terrasse"],
+    color: "#C65D3D",
+    accent: "#E89579",
+    hours: {
+      Mon: null, Tue: "17:00 – 00:00", Wed: "17:00 – 00:00",
+      Thu: "17:00 – 01:00", Fri: "17:00 – 02:00",
+      Sat: "15:00 – 02:00", Sun: "15:00 – 22:00",
+    },
+    openNow: true,
+    closesIn: "2h12",
+    specialties: ["Planches", "Vins nature", "Sangria maison"],
+    events: [
+      { id: 'e1', title: "Soirée dégustation — vins du Languedoc", date: "Ven. 25 avril", time: "19:30", price: "15€", tag: "Dégustation", attending: 34 },
+      { id: 'e2', title: "DJ Set — Lazy Sundays", date: "Dim. 27 avril", time: "17:00", price: "Gratuit", tag: "Musique", attending: 58 },
+      { id: 'e3', title: "Tapas & Flamenco", date: "Jeu. 1er mai", time: "20:00", price: "12€", tag: "Live", attending: 22 },
+    ],
+  },
+  {
+    id: 'pignom',
+    name: "Le Pignom",
+    tagline: "Pub de quartier",
+    description: "Le pub historique de Bruz. Bières pression, whiskies, retransmissions sportives et soirées quiz. Ambiance conviviale, habitués bienvenus.",
+    address: "5 place du Marché, 35170 Bruz",
+    distance: "0.7 km",
+    rating: 4.3,
+    reviews: 243,
+    priceLevel: "€",
+    tags: ["Bières", "Sport", "Quiz"],
+    color: "#6B3A4A",
+    accent: "#A8637A",
+    hours: {
+      Mon: "16:00 – 00:00", Tue: "16:00 – 00:00", Wed: "16:00 – 01:00",
+      Thu: "16:00 – 02:00", Fri: "16:00 – 02:00",
+      Sat: "14:00 – 02:00", Sun: null,
+    },
+    openNow: true,
+    closesIn: "3h45",
+    specialties: ["Guinness", "Whiskies", "Croque-monsieur"],
+    events: [
+      { id: 'e4', title: "Quiz du mercredi — spécial 90s", date: "Mer. 23 avril", time: "21:00", price: "Gratuit", tag: "Quiz", attending: 42 },
+      { id: 'e5', title: "Ligue 1 — Rennes vs PSG", date: "Sam. 26 avril", time: "21:00", price: "Gratuit", tag: "Sport", attending: 89 },
+      { id: 'e6', title: "Open Mic — scène ouverte", date: "Jeu. 30 avril", time: "20:30", price: "Gratuit", tag: "Live", attending: 18 },
+    ],
+  },
+  {
+    id: 'arriere-cour',
+    name: "L'Arrière-Cour",
+    tagline: "Cocktails & guinguette",
+    description: "Cour cachée, transats, guirlandes et cocktails signature. L'été, concerts acoustiques tous les jeudis. Un secret bien gardé de Bruz.",
+    address: "18 bis rue de la Rabine, 35170 Bruz",
+    distance: "0.9 km",
+    rating: 4.8,
+    reviews: 124,
+    priceLevel: "€€",
+    tags: ["Cocktails", "Guinguette", "Concerts"],
+    color: "#D9A44A",
+    accent: "#E8C078",
+    hours: {
+      Mon: null, Tue: null, Wed: "18:00 – 00:00",
+      Thu: "18:00 – 01:00", Fri: "18:00 – 02:00",
+      Sat: "16:00 – 02:00", Sun: "16:00 – 23:00",
+    },
+    openNow: false,
+    opensIn: "Demain 18:00",
+    specialties: ["Spritz maison", "Mojito pastèque", "Planches"],
+    events: [
+      { id: 'e7', title: "Jeudi acoustique — Lou & les Garçons", date: "Jeu. 24 avril", time: "20:00", price: "Gratuit", tag: "Live", attending: 47 },
+      { id: 'e8', title: "Ouverture officielle de la terrasse", date: "Sam. 3 mai", time: "16:00", price: "Gratuit", tag: "Événement", attending: 156 },
+    ],
+  },
+];
+
+export const USER_DATA = {
+  name: "Enzo",
+  handle: "@enzo",
+  avatar: "E",
+  color: "#C65D3D",
+  groups: [
+    { id: 'g1', name: "Les Bruzois", members: 7, type: "permanent", lastMsg: "On se fait Le Pignom ce soir ?", time: "14:32", unread: 3, emoji: "🍻" },
+    { id: 'g2', name: "Ker Lann 2026", members: 24, type: "permanent", lastMsg: "Qui est chaud pour l'Ostal vendredi ?", time: "12:18", unread: 7, emoji: "🎓" },
+    { id: 'g3', name: "Anniv Antoine", members: 12, type: "ephemeral", lastMsg: "Réservé à 20h 👌", time: "Hier", unread: 0, emoji: "🎂", expiresIn: "3 jours" },
+    { id: 'g4', name: "Afterwork stagiaires", members: 6, type: "permanent", lastMsg: "Charlotte : je peux pas jeudi", time: "Hier", unread: 0, emoji: "💼" },
+  ],
+  annonces: [
+    { id: 'a1', title: "Anniv surprise d'Antoine 🎂", bar: "L'Arrière-Cour", date: "Sam. 3 mai — 20:00", attending: 12, status: "privée" },
+  ],
+};
+
+export const ANNONCES_PUBLIC = [
+  { id: 'p1', author: "Sarah",     avatar: "S", color: "#6B3A4A", title: "Apéro spontané à L'Ostal",            bar: "L'Ostal",         when: "Ce soir 19:00",       attending: 6, maxAttending: 10, type: "soirée" },
+  { id: 'p2', author: "Clément",   avatar: "C", color: "#6D7A3D", title: "On regarde le match Rennes-PSG ?", bar: "Le Pignom",        when: "Sam. 26 avril 21:00", attending: 4, maxAttending: 8,  type: "soirée" },
+  { id: 'p3', author: "Élodie",    avatar: "É", color: "#D9A44A", title: "Qui veut tester les cocktails ?",  bar: "L'Arrière-Cour",   when: "Ven. 25 avril 20:30", attending: 3, maxAttending: 6,  type: "soirée" },
+];

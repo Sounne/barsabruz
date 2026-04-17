@@ -1,0 +1,134 @@
+/* Bars à Bruz — warm convivial palette */
+:root {
+  /* Primary warms */
+  --terracotta: #C65D3D;
+  --terracotta-deep: #A8442A;
+  --terracotta-soft: #E89579;
+  --ochre: #D9A44A;
+  --ochre-deep: #B8832E;
+  --cream: #F5EBDA;
+  --cream-deep: #EADBC1;
+  --paper: #FAF4E8;
+
+  /* Neutrals */
+  --ink: #2A1F17;
+  --ink-soft: #5C4A3C;
+  --ink-mute: #8B7866;
+  --line: rgba(42, 31, 23, 0.12);
+  --line-strong: rgba(42, 31, 23, 0.22);
+
+  /* Accents */
+  --plum: #6B3A4A;
+  --olive: #6D7A3D;
+  --sky-dim: #7FA7B8;
+
+  /* Semantic */
+  --success: #6D8F52;
+  --warning: #D9A44A;
+  --danger: #C65D3D;
+
+  /* Radii */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px rgba(42,31,23,0.04), 0 4px 14px rgba(42,31,23,0.06);
+  --shadow-float: 0 6px 24px rgba(42,31,23,0.12);
+}
+
+@font-face {
+  font-family: 'Fraunces-fallback';
+  src: local('Georgia');
+}
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+.serif {
+  font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
+  font-feature-settings: "ss01", "ss02";
+  letter-spacing: -0.01em;
+}
+
+/* Hide scrollbars in scroll regions of the phone */
+.noscroll::-webkit-scrollbar { display: none; }
+.noscroll { scrollbar-width: none; }
+
+/* Tweaks panel */
+.tweaks-panel {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
+  z-index: 1000;
+  width: 260px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+}
+.tweaks-panel h3 {
+  margin: 0 0 12px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--ink-mute); font-weight: 600;
+}
+.tweaks-panel .row { margin-bottom: 10px; }
+.tweaks-panel label {
+  display: block; font-size: 11px; color: var(--ink-soft);
+  margin-bottom: 4px; font-weight: 500;
+}
+.tweaks-panel .swatches {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.tweaks-panel .swatch {
+  aspect-ratio: 1; border-radius: 8px; cursor: pointer;
+  border: 2px solid transparent; transition: transform 0.1s;
+}
+.tweaks-panel .swatch:hover { transform: scale(1.05); }
+.tweaks-panel .swatch.active { border-color: var(--ink); }
+
+
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%; width: 100%;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  #app-root {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    background: var(--paper);
+    overflow: hidden;
+  }
+  /* On wider viewports: center the app with decorative side bg */
+  @media (min-width: 640px) {
+    body {
+      background:
+        radial-gradient(at 20% 10%, rgba(217,164,74,0.18), transparent 50%),
+        radial-gradient(at 80% 90%, rgba(198,93,61,0.15), transparent 50%),
+        #EDE2CD;
+      padding: 20px 0;
+      box-sizing: border-box;
+    }
+    #app-root {
+      max-width: 440px;
+      height: calc(100vh - 40px);
+      max-height: 920px;
+      border-radius: 32px;
+      box-shadow: 0 24px 60px rgba(42,31,23,0.18), 0 0 0 1px rgba(42,31,23,0.08);
+    }
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
