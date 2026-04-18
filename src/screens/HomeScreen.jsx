@@ -4,13 +4,15 @@ import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 
+const getParticipantCount = (attending, participantRows) => Math.max(attending, participantRows + 1)
+
 // Screens: Home, Discover, Bar Detail
 
 // ═══════════════ SORTIE DETAIL SHEET ═══════════════
 
 const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUser, onJoin, onUnjoin, onDelete, onClose }) => {
   const displayParticipants = participants ?? []
-  const participantCount = Math.max(a.attending, displayParticipants.length)
+  const participantCount = getParticipantCount(a.attending, displayParticipants.length)
   const isFull = participantCount >= a.maxAttending
   const canJoin = authUser && !joined && !isFull && !isCreator
   const [confirmDelete, setConfirmDelete] = React.useState(false)
@@ -223,7 +225,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
 
   const handleJoin = (annonceId, currentAttending) => {
     const a = publics.find(x => x.id === annonceId)
-    const participantCount = Math.max(a?.attending ?? 0, (participantsMap[annonceId] ?? []).length)
+    const participantCount = getParticipantCount(a?.attending ?? 0, (participantsMap[annonceId] ?? []).length)
     if (!authUser || joinedAnnonceIds.has(annonceId) || (a && participantCount >= a.maxAttending)) return
     joinAnnonce(annonceId, currentAttending)
     // Keep selectedAnnonce in sync
@@ -421,7 +423,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
       ) : (
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {publics.slice(0, 5).map(a => {
-            const participantCount = Math.max(a.attending, (participantsMap[a.id] ?? []).length)
+            const participantCount = getParticipantCount(a.attending, (participantsMap[a.id] ?? []).length)
             const hasJoined = joinedAnnonceIds.has(a.id)
             const isFull = participantCount >= a.maxAttending
             const isCreator = authUser && a.user_id === authUser.id
