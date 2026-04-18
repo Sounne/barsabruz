@@ -12,17 +12,20 @@ const BAR_IMAGES = {
 }
 
 export async function fetchBars() {
-  const { data: bars, error: barsError } = await supabase
-    .from('bars')
-    .select('*, events(*)')
-    .order('name')
+  const [{ data: bars, error: barsError }, { data: events, error: eventsError }] = await Promise.all([
+    supabase.from('bars').select('*').order('rating', { ascending: false }),
+    supabase.from('events').select('*'),
+  ])
 
   if (barsError) throw barsError
+  if (eventsError) throw eventsError
 
   return bars.map(bar => ({
     ...bar,
+    mapsUrl: bar.mapsurl,
+    priceLevel: bar.pricelevel,
     image: BAR_IMAGES[bar.id] ?? null,
-    events: bar.events ?? [],
+    events: (events ?? []).filter(e => e.bar_id === bar.id),
   }))
 }
 
@@ -33,7 +36,11 @@ export async function fetchAnnonces() {
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data
+  return data.map(a => ({
+    ...a,
+    when: a.when_text,
+    maxAttending: a.max_attending,
+  }))
 }
 
 export async function fetchUser(userId) {
