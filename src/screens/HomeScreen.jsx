@@ -428,6 +428,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
             const isFull = participantCount >= a.maxAttending
             const isCreator = authUser && a.user_id === authUser.id
             const canJoin = authUser && !hasJoined && !isFull && !isCreator
+            const canUnjoin = authUser && hasJoined && !isCreator
 
             return (
               <div key={a.id} onClick={() => setSelectedAnnonce(a)} style={{
@@ -460,15 +461,18 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                   </div>
                   {!isCreator && (
                     <button
-                      onClick={e => { e.stopPropagation(); handleJoin(a.id, participantCount) }}
-                      disabled={!canJoin}
+                      onClick={e => {
+                        e.stopPropagation()
+                        hasJoined ? handleUnjoin(a.id) : handleJoin(a.id, participantCount)
+                      }}
+                      disabled={!canJoin && !canUnjoin}
                       style={{
                         background: hasJoined ? '#4A7C59' : isFull ? 'var(--line)' : !authUser ? 'var(--ink-mute)' : 'var(--ink)',
                         color: '#fff',
                         padding: '6px 14px', borderRadius: 999,
                         fontSize: 12, fontWeight: 600,
                         border: 'none', fontFamily: 'inherit',
-                        cursor: canJoin ? 'pointer' : 'default',
+                        cursor: (canJoin || canUnjoin) ? 'pointer' : 'default',
                         transition: 'background 0.15s',
                       }}
                     >
