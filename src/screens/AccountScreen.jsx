@@ -230,7 +230,7 @@ const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
 
 // ─────────── ACCOUNT SCREEN ───────────
 const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
-  const { user, bars, annonces, saveProfile, joinedAnnonceIds } = useData()
+  const { user, bars, annonces, saveProfile, joinedAnnonceIds, myGroups, friends } = useData()
   const { user: authUser } = useAuth()
   const [editing, setEditing] = React.useState(false)
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
@@ -311,19 +311,14 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
         <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
           {[
             { n: mesAnnonces.length + mesSorties.length, l: 'Sorties' },
-            { n: user.groups.length, l: 'Groupes' },
+            { n: myGroups.length, l: 'Groupes' },
+            { n: friends.length, l: 'Amis' },
           ].map(s => (
             <div key={s.l}>
               <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>{s.n}</div>
               <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.l}</div>
             </div>
           ))}
-          <Wip>
-            <div>
-              <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>28</div>
-              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Amis</div>
-            </div>
-          </Wip>
         </div>
       </div>
 
@@ -430,7 +425,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
           {[
             { icon: 'bell', label: 'Notifications', detail: 'Actives' },
             { icon: 'heart', label: 'Bars favoris', detail: String(favBars.length) },
-            { icon: 'users', label: 'Mes amis', detail: '28' },
+            { icon: 'users', label: 'Mes amis', detail: String(friends.length) },
             { icon: 'lock', label: 'Confidentialité', detail: '' },
             { icon: 'globe', label: 'Langue', detail: 'Français' },
           ].map((row, i, arr) => (

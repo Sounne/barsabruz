@@ -106,6 +106,22 @@ export async function fetchAnnonceParticipants(annonceId) {
   return data.map(r => ({ ...r.profiles, user_id: r.user_id, joined_at: r.joined_at }))
 }
 
+export async function fetchAllAnnonceParticipants(annonceIds) {
+  if (!annonceIds?.length) return {}
+  const { data, error } = await supabase
+    .from('annonce_participants')
+    .select('annonce_id, user_id, joined_at, profiles(name, avatar_letter, color)')
+    .in('annonce_id', annonceIds)
+    .order('joined_at')
+  if (error) throw error
+  const map = {}
+  for (const r of data) {
+    if (!map[r.annonce_id]) map[r.annonce_id] = []
+    map[r.annonce_id].push({ ...r.profiles, user_id: r.user_id, joined_at: r.joined_at })
+  }
+  return map
+}
+
 export async function deleteAnnonce(annonceId) {
   const { error } = await supabase
     .from('annonces')

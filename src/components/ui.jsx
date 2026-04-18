@@ -50,7 +50,7 @@ const Icon = ({ name, size = 20, color = 'currentColor', stroke = 1.8 }) => {
 };
 
 // ─────────── AVATAR ───────────
-const Avatar = ({ letter, color = '#C65D3D', size = 36, ring = false }) => (
+const Avatar = ({ letter, color = '#C65D3D', size = 36, ring = false, style }) => (
   <div style={{
     width: size, height: size, borderRadius: '50%',
     background: `linear-gradient(135deg, ${color}, ${shade(color, -15)})`,
@@ -59,6 +59,7 @@ const Avatar = ({ letter, color = '#C65D3D', size = 36, ring = false }) => (
     fontFamily: 'Fraunces, Georgia, serif',
     flexShrink: 0,
     boxShadow: ring ? `0 0 0 2px #fff, 0 0 0 4px ${color}` : 'none',
+    ...style,
   }}>{letter}</div>
 );
 

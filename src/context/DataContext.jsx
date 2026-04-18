@@ -5,7 +5,9 @@ import {
   joinAnnonceUser, unjoinAnnonceUser,
   fetchJoinedAnnonceIds, deleteAnnonce as svcDeleteAnnonce,
   subscribeToAnnonces, unsubscribeChannel,
+  fetchAllAnnonceParticipants,
 } from '../services'
+import { getAccessibleGroups, getFriends } from '../lib/chatApi'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
 
@@ -15,9 +17,23 @@ export function DataProvider({ children }) {
   const { user } = useAuth()
   const [bars, setBars] = React.useState(null)
   const [annonces, setAnnonces] = React.useState(null)
+  const [participantsMap, setParticipantsMap] = React.useState({})
   const [profile, setProfile] = React.useState(null)
   const [myJoins, setMyJoins] = React.useState(new Set())
+  const [myGroups, setMyGroups] = React.useState([])
+  const [friends, setFriends] = React.useState([])
   const [loading, setLoading] = React.useState(true)
+
+  const loadParticipants = React.useCallback(async (annoncesList) => {
+    const ids = (annoncesList ?? [])
+      .filter(a => typeof a.id === 'string' && !a.id.startsWith('p'))
+      .map(a => a.id)
+    if (!ids.length) return
+    try {
+      const map = await fetchAllAnnonceParticipants(ids)
+      setParticipantsMap(map)
+    } catch {}
+  }, [])
 
   // Load bars + annonces once
   React.useEffect(() => {
@@ -29,8 +45,10 @@ export function DataProvider({ children }) {
           fetchAnnonces(),
         ])
         if (!cancelled) {
+          const resolvedAnnonces = annoncesData?.length ? annoncesData : ANNONCES_PUBLIC
           setBars(barsData?.length ? barsData : BARS_DATA)
-          setAnnonces(annoncesData?.length ? annoncesData : ANNONCES_PUBLIC)
+          setAnnonces(resolvedAnnonces)
+          if (annoncesData?.length) loadParticipants(annoncesData)
         }
       } catch (err) {
         console.warn('Supabase non disponible, données locales utilisées:', err.message)
@@ -52,7 +70,12 @@ export function DataProvider({ children }) {
     try {
       channel = subscribeToAnnonces(() => {
         fetchAnnonces()
-          .then(data => { if (data?.length) setAnnonces(data) })
+          .then(data => {
+            if (data?.length) {
+              setAnnonces(data)
+              loadParticipants(data)
+            }
+          })
           .catch(() => {})
       })
     } catch {}
@@ -78,6 +101,17 @@ export function DataProvider({ children }) {
       .catch(() => {})
   }, [user?.id])
 
+  // Load groups and friends when auth user changes
+  React.useEffect(() => {
+    if (!user) { setMyGroups([]); setFriends([]); return }
+    getAccessibleGroups(user.id)
+      .then(all => setMyGroups(all.filter(g => g.isMember)))
+      .catch(() => {})
+    getFriends(user.id)
+      .then(setFriends)
+      .catch(() => {})
+  }, [user?.id])
+
   const saveProfile = React.useCallback(async (updates) => {
     if (!user) return
     const updated = await updateProfile(user.id, updates)
@@ -93,7 +127,6 @@ export function DataProvider({ children }) {
     bio: profile.bio || '',
     favorites: profile.favorites ?? [],
     sorties: USER_DATA.sorties,
-    groups: USER_DATA.groups,
     annonces: USER_DATA.annonces,
   } : USER_DATA
 
@@ -104,6 +137,20 @@ export function DataProvider({ children }) {
       a.id === annonceId ? { ...a, attending: a.attending + 1 } : a
     ))
     setMyJoins(prev => new Set([...prev, annonceId]))
+    setParticipantsMap(prev => {
+      const list = prev[annonceId] ?? []
+      if (list.find(p => p.user_id === user.id)) return prev
+      return {
+        ...prev,
+        [annonceId]: [...list, {
+          user_id: user.id,
+          name: profile?.name ?? '',
+          avatar_letter: profile?.avatar_letter ?? '?',
+          color: profile?.color ?? '#C65D3D',
+          joined_at: new Date().toISOString(),
+        }],
+      }
+    })
     try {
       const newCount = await joinAnnonceUser(annonceId, user.id)
       setAnnonces(prev => (prev ?? []).map(a =>
@@ -118,7 +165,7 @@ export function DataProvider({ children }) {
         ))
       } catch {}
     }
-  }, [user?.id])
+  }, [user?.id, profile])
 
   // Unjoin — optimistic update, then RPC
   const unjoinAnnonce = React.useCallback(async (annonceId) => {
@@ -127,6 +174,10 @@ export function DataProvider({ children }) {
       a.id === annonceId ? { ...a, attending: Math.max(0, a.attending - 1) } : a
     ))
     setMyJoins(prev => { const n = new Set(prev); n.delete(annonceId); return n })
+    setParticipantsMap(prev => ({
+      ...prev,
+      [annonceId]: (prev[annonceId] ?? []).filter(p => p.user_id !== user.id),
+    }))
     try {
       const newCount = await unjoinAnnonceUser(annonceId, user.id)
       setAnnonces(prev => (prev ?? []).map(a =>
@@ -151,6 +202,7 @@ export function DataProvider({ children }) {
   const value = {
     bars: bars ?? BARS_DATA,
     annonces: annonces ?? ANNONCES_PUBLIC,
+    participantsMap,
     user: userData,
     profile,
     saveProfile,
@@ -159,6 +211,8 @@ export function DataProvider({ children }) {
     deleteAnnonce,
     addAnnonce,
     joinedAnnonceIds: myJoins,
+    myGroups,
+    friends,
     loading,
   }
 

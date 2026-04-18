@@ -3,29 +3,17 @@ import { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip } from '../components/u
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
-import { fetchAnnonceParticipants } from '../services'
 
 // Screens: Home, Discover, Bar Detail
 
 // ═══════════════ SORTIE DETAIL SHEET ═══════════════
-const AVATAR_COLORS = ['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D', '#3A6AB0']
 
-const SortieDetailSheet = ({ annonce: a, joined, isCreator, authUser, onJoin, onUnjoin, onDelete, onClose }) => {
+const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUser, onJoin, onUnjoin, onDelete, onClose }) => {
   const isFull = a.attending >= a.maxAttending
   const canJoin = authUser && !joined && !isFull && !isCreator
   const [confirmDelete, setConfirmDelete] = React.useState(false)
-  const [participants, setParticipants] = React.useState(null)
-
-  // Fetch real participants on open
-  React.useEffect(() => {
-    if (!a.id || typeof a.id !== 'string' || a.id.startsWith('p')) return
-    fetchAnnonceParticipants(a.id)
-      .then(setParticipants)
-      .catch(() => {})
-  }, [a.id])
 
   const displayParticipants = participants ?? []
-  const bubbleCount = Math.min(a.attending, 5)
 
   return (
     <div style={{
@@ -112,19 +100,10 @@ const SortieDetailSheet = ({ annonce: a, joined, isCreator, authUser, onJoin, on
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                {displayParticipants.length > 0
-                  ? displayParticipants.slice(0, 5).map((p, i) => (
-                      <Avatar key={p.user_id} letter={p.avatar_letter} color={p.color} size={28}
-                        style={{ marginLeft: i === 0 ? 0 : -10, border: '2px solid #fff' }}/>
-                    ))
-                  : [...Array(bubbleCount)].map((_, i) => (
-                      <div key={i} style={{
-                        width: 28, height: 28, borderRadius: '50%',
-                        background: AVATAR_COLORS[i % AVATAR_COLORS.length],
-                        border: '2px solid #fff', marginLeft: i === 0 ? 0 : -10,
-                      }}/>
-                    ))
-                }
+                {displayParticipants.slice(0, 5).map((p, i) => (
+                  <Avatar key={p.user_id} letter={p.avatar_letter} color={p.color} size={28}
+                    style={{ marginLeft: i === 0 ? 0 : -10, border: '2px solid #fff' }}/>
+                ))}
                 {a.attending > 5 && (
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%',
@@ -237,7 +216,7 @@ const SortieDetailSheet = ({ annonce: a, joined, isCreator, authUser, onJoin, on
 
 // ═══════════════ HOME SCREEN ═══════════════
 const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab }) => {
-  const { bars: allBars, annonces: publics, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds } = useData()
+  const { bars: allBars, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds } = useData()
   const { user: authUser } = useAuth()
   const [search, setSearch] = React.useState('')
   const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
@@ -462,12 +441,9 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                     <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.when} · {a.bar}</div>
                   </div>
                   <div style={{ display: 'flex' }}>
-                    {[...Array(Math.min(a.attending, 3))].map((_, i) => (
-                      <div key={i} style={{
-                        width: 22, height: 22, borderRadius: '50%',
-                        background: AVATAR_COLORS[i % AVATAR_COLORS.length],
-                        border: '2px solid #fff', marginLeft: i === 0 ? 0 : -8,
-                      }}/>
+                    {(participantsMap[a.id] ?? []).slice(0, 3).map((p, i) => (
+                      <Avatar key={p.user_id} letter={p.avatar_letter} color={p.color} size={22}
+                        style={{ marginLeft: i === 0 ? 0 : -8, border: '2px solid #fff' }}/>
                     ))}
                   </div>
                 </div>
@@ -506,6 +482,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
       {selectedAnnonce && (
         <SortieDetailSheet
           annonce={selectedAnnonce}
+          participants={participantsMap[selectedAnnonce.id] ?? []}
           joined={joinedAnnonceIds.has(selectedAnnonce.id)}
           isCreator={!!(authUser && selectedAnnonce.user_id === authUser.id)}
           authUser={authUser}
