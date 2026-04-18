@@ -11,6 +11,8 @@ const BAR_IMAGES = {
   'arriere-cour': arriereCourtImg,
 }
 
+// ─────────── BARS ───────────
+
 export async function fetchBars() {
   const [{ data: bars, error: barsError }, { data: events, error: eventsError }] = await Promise.all([
     supabase.from('bars').select('*').order('rating', { ascending: false }),
@@ -29,6 +31,8 @@ export async function fetchBars() {
   }))
 }
 
+// ─────────── ANNONCES ───────────
+
 export async function fetchAnnonces() {
   const { data, error } = await supabase
     .from('annonces')
@@ -43,16 +47,18 @@ export async function fetchAnnonces() {
   }))
 }
 
-export async function fetchUser(userId) {
+export async function createAnnonce(annonce) {
   const { data, error } = await supabase
-    .from('users')
-    .select('*, sorties(*), groups(*), annonces(*)')
-    .eq('id', userId)
+    .from('annonces')
+    .insert(annonce)
+    .select()
     .single()
 
   if (error) throw error
   return data
 }
+
+// ─────────── EVENTS ───────────
 
 export async function joinEvent(eventId, userId) {
   const { error } = await supabase
@@ -62,10 +68,50 @@ export async function joinEvent(eventId, userId) {
   if (error) throw error
 }
 
-export async function createAnnonce(annonce) {
+// ─────────── AUTH ───────────
+
+export async function signUp(email, password, name) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { name },
+      emailRedirectTo: `${window.location.origin}/barsabruz/`,
+    },
+  })
+  if (error) throw error
+  return data
+}
+
+export async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return data
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
+}
+
+// ─────────── PROFILE ───────────
+
+export async function fetchProfile(userId) {
   const { data, error } = await supabase
-    .from('annonces')
-    .insert(annonce)
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateProfile(userId, updates) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
     .select()
     .single()
 

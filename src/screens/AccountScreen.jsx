@@ -1,19 +1,42 @@
 import React from 'react'
 import { Icon, Avatar, BarHero, shade } from '../components/ui'
 import { useData } from '../context/DataContext'
+import { signOut } from '../services'
 
 // ─────────── EDIT PROFILE SHEET ───────────
 const EditProfileSheet = ({ user, onSave, onClose }) => {
-  const [name, setName] = React.useState(user.name);
-  const [handle, setHandle] = React.useState(user.handle);
-  const [bio, setBio] = React.useState(user.bio || '');
+  const [name, setName] = React.useState(user.name)
+  const [handle, setHandle] = React.useState(user.handle)
+  const [bio, setBio] = React.useState(user.bio || '')
+  const [saving, setSaving] = React.useState(false)
+  const [error, setError] = React.useState('')
 
   const inputStyle = {
     width: '100%', padding: '12px 14px',
     border: '1.5px solid var(--line)', borderRadius: 12,
     fontSize: 14, fontFamily: 'inherit', color: 'var(--ink)',
     background: '#fff', outline: 'none', boxSizing: 'border-box',
-  };
+    transition: 'border-color 0.15s',
+  }
+
+  const handleSaveClick = async () => {
+    if (!name.trim()) { setError('Le prénom est requis.'); return }
+    setError('')
+    setSaving(true)
+    try {
+      await onSave({
+        name: name.trim(),
+        handle: handle.trim(),
+        bio: bio.trim(),
+        avatar_letter: name.trim()[0]?.toUpperCase() || 'E',
+      })
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Erreur lors de la sauvegarde.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <>
@@ -41,7 +64,7 @@ const EditProfileSheet = ({ user, onSave, onClose }) => {
           </button>
         </div>
 
-        {/* Avatar */}
+        {/* Avatar preview */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
           <div style={{ position: 'relative' }}>
             <Avatar letter={name[0]?.toUpperCase() || 'E'} color={user.color} size={80} ring/>
@@ -62,36 +85,59 @@ const EditProfileSheet = ({ user, onSave, onClose }) => {
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
               Prénom
             </label>
-            <input value={name} onChange={e => setName(e.target.value)} style={inputStyle}/>
+            <input
+              value={name} onChange={e => setName(e.target.value)}
+              style={inputStyle}
+              onFocus={e => e.target.style.borderColor = 'var(--terracotta)'}
+              onBlur={e => e.target.style.borderColor = 'var(--line)'}
+            />
           </div>
           <div>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
               Identifiant
             </label>
-            <input value={handle} onChange={e => setHandle(e.target.value)} style={inputStyle}/>
+            <input
+              value={handle} onChange={e => setHandle(e.target.value)}
+              style={inputStyle}
+              onFocus={e => e.target.style.borderColor = 'var(--terracotta)'}
+              onBlur={e => e.target.style.borderColor = 'var(--line)'}
+            />
           </div>
           <div>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
               Bio
             </label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} rows={2}
-              style={{ ...inputStyle, resize: 'none', lineHeight: 1.5 }}/>
+              style={{ ...inputStyle, resize: 'none', lineHeight: 1.5 }}
+              onFocus={e => e.target.style.borderColor = 'var(--terracotta)'}
+              onBlur={e => e.target.style.borderColor = 'var(--line)'}
+            />
           </div>
         </div>
 
-        <button onClick={() => onSave({ name, handle, bio })} style={{
+        {error && (
+          <div style={{
+            marginTop: 12, padding: '9px 13px',
+            background: 'rgba(198,93,61,0.08)', border: '1px solid rgba(198,93,61,0.25)',
+            borderRadius: 10, fontSize: 13, color: 'var(--terracotta)', fontWeight: 500,
+          }}>
+            {error}
+          </div>
+        )}
+
+        <button onClick={handleSaveClick} disabled={saving} style={{
           marginTop: 20, width: '100%', padding: 14,
-          background: 'var(--terracotta)', color: '#fff',
+          background: saving ? 'var(--line-strong)' : 'var(--terracotta)', color: '#fff',
           border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600,
-          fontFamily: 'inherit', cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(198,93,61,0.35)',
+          fontFamily: 'inherit', cursor: saving ? 'default' : 'pointer',
+          boxShadow: saving ? 'none' : '0 4px 14px rgba(198,93,61,0.35)',
         }}>
-          Enregistrer
+          {saving ? 'Sauvegarde…' : 'Enregistrer'}
         </button>
       </div>
     </>
-  );
-};
+  )
+}
 
 // ─────────── FAVORITE BAR CARD ───────────
 const FavBarCard = ({ bar, onOpen }) => (
@@ -101,7 +147,6 @@ const FavBarCard = ({ bar, onOpen }) => (
       boxShadow: 'var(--shadow-card)', cursor: 'pointer', position: 'relative',
     }}>
     <BarHero bar={bar} height={110} small/>
-    {/* overlay name */}
     <div style={{
       position: 'absolute', inset: 0,
       background: 'linear-gradient(to top, rgba(0,0,0,0.6) 40%, transparent 100%)',
@@ -111,7 +156,6 @@ const FavBarCard = ({ bar, onOpen }) => (
       <div className="serif" style={{ color: '#fff', fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}>{bar.name}</div>
       <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, marginTop: 2 }}>{bar.tagline.split(' · ')[0]}</div>
     </div>
-    {/* heart badge */}
     <div style={{
       position: 'absolute', top: 8, right: 8,
       width: 26, height: 26, borderRadius: '50%',
@@ -122,7 +166,7 @@ const FavBarCard = ({ bar, onOpen }) => (
       <Icon name="heart" size={13} color="#fff" stroke={2}/>
     </div>
   </div>
-);
+)
 
 // ─────────── SORTIE ROW ───────────
 const SortieRow = ({ sortie, bar, onOpen }) => (
@@ -132,7 +176,6 @@ const SortieRow = ({ sortie, bar, onOpen }) => (
       padding: '11px 14px',
       cursor: bar ? 'pointer' : 'default',
     }}>
-    {/* colored dot + line */}
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, alignSelf: 'stretch', paddingTop: 2 }}>
       <div style={{
         width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
@@ -155,22 +198,30 @@ const SortieRow = ({ sortie, bar, onOpen }) => (
       <span>{sortie.with}</span>
     </div>
   </div>
-);
+)
 
 // ─────────── ACCOUNT SCREEN ───────────
 const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
-  const { user: initialUser, bars } = useData()
-  const [user, setUser] = React.useState(initialUser);
-  const [editing, setEditing] = React.useState(false);
-  const [sortiesExpanded, setSortiesExpanded] = React.useState(false);
+  const { user, bars, saveProfile } = useData()
+  const [editing, setEditing] = React.useState(false)
+  const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
+  const [signingOut, setSigningOut] = React.useState(false)
 
-  const favBars = bars.filter(b => user.favorites.includes(b.id));
-  const displayedSorties = sortiesExpanded ? user.sorties : user.sorties.slice(0, 2);
+  const favBars = bars.filter(b => user.favorites.includes(b.id))
+  const displayedSorties = sortiesExpanded ? user.sorties : user.sorties.slice(0, 2)
 
-  const handleSave = (updated) => {
-    setUser(prev => ({ ...prev, ...updated }));
-    setEditing(false);
-  };
+  const handleSave = async (updates) => {
+    await saveProfile(updates)
+  }
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    try {
+      await signOut()
+    } catch {
+      setSigningOut(false)
+    }
+  }
 
   return (
     <div style={{ paddingBottom: 100 }}>
@@ -240,7 +291,6 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
             {favBars.map(bar => (
               <FavBarCard key={bar.id} bar={bar} onOpen={onOpenBar}/>
             ))}
-            {/* Add more CTA */}
             <div onClick={() => {}} style={{
               flex: '0 0 80px', borderRadius: 16, border: '1.5px dashed var(--line-strong)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -287,12 +337,12 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
         </div>
         <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
           {displayedSorties.map((s, i) => {
-            const bar = bars.find(b => b.id === s.barId);
+            const bar = bars.find(b => b.id === s.barId)
             return (
               <div key={s.id} style={{ borderBottom: i < displayedSorties.length - 1 ? '1px solid var(--line)' : 'none' }}>
                 <SortieRow sortie={s} bar={bar} onOpen={onOpenBar}/>
               </div>
-            );
+            )
           })}
           {user.sorties.length > 2 && (
             <button onClick={() => setSortiesExpanded(e => !e)} style={{
@@ -302,7 +352,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
               fontSize: 12, fontWeight: 600, color: 'var(--terracotta)', cursor: 'pointer', fontFamily: 'inherit',
             }}>
               {sortiesExpanded ? 'Voir moins' : `Voir tout (${user.sorties.length})`}
-              <Icon name={sortiesExpanded ? 'chevronD' : 'chevronD'} size={13} color="var(--terracotta)"
+              <Icon name="chevronD" size={13} color="var(--terracotta)"
                 style={{ transform: sortiesExpanded ? 'rotate(180deg)' : 'none' }}/>
             </button>
           )}
@@ -341,11 +391,15 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
       </div>
 
       <div style={{ padding: '18px 20px' }}>
-        <button style={{
+        <button onClick={handleSignOut} disabled={signingOut} style={{
           width: '100%', background: 'transparent', color: 'var(--ink-mute)',
           border: '1px solid var(--line)', padding: 13, borderRadius: 12,
-          fontSize: 13, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
-        }}>Se déconnecter</button>
+          fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+          cursor: signingOut ? 'default' : 'pointer',
+          opacity: signingOut ? 0.6 : 1,
+        }}>
+          {signingOut ? 'Déconnexion…' : 'Se déconnecter'}
+        </button>
         <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink-mute)', marginTop: 18 }}>
           Bars à Bruz · v1.0 · Fait par Enzo
         </div>
@@ -356,7 +410,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
         <EditProfileSheet user={user} onSave={handleSave} onClose={() => setEditing(false)}/>
       )}
     </div>
-  );
-};
+  )
+}
 
-export { AccountScreen };
+export { AccountScreen }

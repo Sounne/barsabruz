@@ -1,28 +1,53 @@
 import React from 'react'
 import { Icon } from './components/ui'
 import { useData } from './context/DataContext'
+import { useAuth } from './context/AuthContext'
 import { HomeScreen, DiscoverScreen, MapView } from './screens/HomeScreen'
 import { BarDetailScreen } from './screens/BarDetailScreen'
 import { AgendaScreen, EventSheet } from './screens/AgendaScreen'
 import { GroupesScreen, GroupChatScreen, NewAnnonceSheet } from './screens/GroupesScreen'
 import { AccountScreen } from './screens/AccountScreen'
+import { AuthScreen } from './screens/AuthScreen'
 
-// Main App — navigation + screens
+// ─────────── LOADING SPLASH ───────────
+const LoadingSplash = () => (
+  <div style={{
+    minHeight: '100dvh', display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    background: 'var(--paper)', gap: 14,
+  }}>
+    <div className="serif" style={{ fontSize: 28, fontWeight: 600, color: 'var(--terracotta)' }}>
+      Bars à Bruz
+    </div>
+    <div style={{ width: 36, height: 3, borderRadius: 99, background: 'var(--line-strong)', overflow: 'hidden', position: 'relative' }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'var(--terracotta)',
+        animation: 'loadingBar 1.2s ease-in-out infinite',
+      }}/>
+    </div>
+  </div>
+)
 
+// ─────────── MAIN APP ───────────
 const App = () => {
+  const { session, loading: authLoading } = useAuth()
   const { bars } = useData()
-  const [tab, setTab] = React.useState('home');
-  const [barId, setBarId] = React.useState(null);
-  const [eventSheet, setEventSheet] = React.useState(null);
-  const [groupChat, setGroupChat] = React.useState(null);
-  const [newAnnonce, setNewAnnonce] = React.useState(false);
+  const [tab, setTab] = React.useState('home')
+  const [barId, setBarId] = React.useState(null)
+  const [eventSheet, setEventSheet] = React.useState(null)
+  const [groupChat, setGroupChat] = React.useState(null)
+  const [newAnnonce, setNewAnnonce] = React.useState(false)
+
+  if (authLoading) return <LoadingSplash/>
+  if (!session) return <AuthScreen/>
 
   const navigate = {
     openBar: (id) => setBarId(id),
     openEvent: (e) => setEventSheet(e),
     openGroup: (g) => setGroupChat(g),
     openAnnonce: (a) => {
-      const bar = bars.find(b => b.name === a.bar);
+      const bar = bars.find(b => b.name === a.bar)
       setEventSheet({
         title: a.title,
         date: a.when.split(' ').slice(0, -1).join(' ') || a.when,
@@ -31,13 +56,12 @@ const App = () => {
         tag: 'Annonce',
         attending: a.attending,
         bar,
-      });
+      })
     },
-  };
+  }
 
-  // Group chat has full-screen takeover
   if (groupChat) {
-    return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)}/>;
+    return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)}/>
   }
 
   return (
@@ -118,7 +142,7 @@ const App = () => {
         </div>
       )}
     </>
-  );
-};
+  )
+}
 
 export default App
