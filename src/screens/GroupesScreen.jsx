@@ -529,7 +529,7 @@ const DMChatScreen = ({ friend, onBack }) => {
   React.useEffect(() => {
     if (!authUser) return
     const ch = chatApi.subscribeToDirectMessages(authUser.id, friend.id, msg => {
-      setMessages(prev => [...prev, msg])
+      setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
     })
     return () => chatApi.unsubscribe(ch)
   }, [authUser?.id, friend.id])
