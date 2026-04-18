@@ -1,6 +1,7 @@
 import React from 'react'
 import { Icon, Avatar, BarHero, shade, Wip } from '../components/ui'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
 import { signOut } from '../services'
 
 // ─────────── EDIT PROFILE SHEET ───────────
@@ -200,15 +201,56 @@ const SortieRow = ({ sortie, bar, onOpen }) => (
   </div>
 )
 
+// ─────────── ANNONCE CARD (for Mes annonces / Mes sorties) ───────────
+const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
+  <div onClick={() => onOpen?.(a)} style={{
+    background: '#fff', borderRadius: 14, padding: 14,
+    boxShadow: 'var(--shadow-card)', cursor: 'pointer',
+    borderLeft: `3px solid ${a.color || 'var(--terracotta)'}`,
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+      {badge && (
+        <span style={{
+          fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
+          color: badge.color, background: badge.bg,
+          padding: '2px 7px', borderRadius: 4,
+        }}>{badge.label}</span>
+      )}
+      <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.bar}</span>
+    </div>
+    <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>{a.title}</div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+      <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.when}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600 }}>
+        <Icon name="users" size={12}/> {a.attending}
+      </div>
+    </div>
+  </div>
+)
+
 // ─────────── ACCOUNT SCREEN ───────────
 const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
-  const { user, bars, saveProfile } = useData()
+  const { user, bars, annonces, saveProfile, joinedAnnonceIds } = useData()
+  const { user: authUser } = useAuth()
   const [editing, setEditing] = React.useState(false)
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
+  const [annoncesExpanded, setAnnoncesExpanded] = React.useState(false)
   const [signingOut, setSigningOut] = React.useState(false)
 
   const favBars = bars.filter(b => user.favorites.includes(b.id))
-  const displayedSorties = sortiesExpanded ? user.sorties : user.sorties.slice(0, 2)
+
+  // Mes annonces = sorties I created
+  const mesAnnonces = authUser
+    ? annonces.filter(a => a.user_id === authUser.id)
+    : []
+
+  // Mes sorties = sorties I joined (but didn't create)
+  const mesSorties = authUser
+    ? annonces.filter(a => joinedAnnonceIds.has(a.id) && a.user_id !== authUser.id)
+    : []
+
+  const displayedAnnonces = annoncesExpanded ? mesAnnonces : mesAnnonces.slice(0, 2)
+  const displayedSorties = sortiesExpanded ? mesSorties : mesSorties.slice(0, 2)
 
   const handleSave = async (updates) => {
     await saveProfile(updates)
@@ -268,18 +310,20 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
 
         <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
           {[
-            { n: user.sorties.length, l: 'Sorties', mock: false },
-            { n: user.groups.length, l: 'Groupes', mock: false },
-            { n: 28, l: 'Amis', mock: true },
-          ].map(s => {
-            const node = (
-              <div>
-                <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>{s.n}</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.l}</div>
-              </div>
-            )
-            return s.mock ? <Wip key={s.l}>{node}</Wip> : <div key={s.l}>{node}</div>
-          })}
+            { n: mesAnnonces.length + mesSorties.length, l: 'Sorties' },
+            { n: user.groups.length, l: 'Groupes' },
+          ].map(s => (
+            <div key={s.l}>
+              <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>{s.n}</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.l}</div>
+            </div>
+          ))}
+          <Wip>
+            <div>
+              <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>28</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Amis</div>
+            </div>
+          </Wip>
         </div>
       </div>
 
@@ -308,65 +352,75 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
         </Wip>
       )}
 
-      {/* Mes annonces */}
-      <Wip>
-      <div style={{ padding: '14px 20px 10px' }}>
-        <h2 className="serif" style={{ fontSize: 18, margin: '0 0 10px', fontWeight: 600 }}>Mes annonces</h2>
-        {user.annonces.map(a => (
-          <div key={a.id} onClick={() => onOpenAnnonce?.(a)}
-            style={{
-              background: '#fff', borderRadius: 14, padding: 14,
-              boxShadow: 'var(--shadow-card)', cursor: 'pointer',
-              borderLeft: '3px solid var(--ochre)',
-            }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
-              <Icon name="lock" size={10}/> {a.status}
-              <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-mute)' }}/>
-              {a.bar}
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginTop: 6 }}>{a.title}</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-              <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{a.date}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }}>
-                <Icon name="users" size={13}/> {a.attending} confirmés
-              </div>
-            </div>
+      {/* Mes annonces (sorties créées) */}
+      {authUser && (
+        <div style={{ padding: '14px 20px 10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Mes sorties proposées</h2>
+            {mesAnnonces.length > 0 && <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{mesAnnonces.length} au total</span>}
           </div>
-        ))}
-      </div>
-      </Wip>
-
-      {/* Mes sorties */}
-      <Wip>
-      <div style={{ padding: '14px 20px 10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-          <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Mes sorties</h2>
-          <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{user.sorties.length} au total</span>
-        </div>
-        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
-          {displayedSorties.map((s, i) => {
-            const bar = bars.find(b => b.id === s.barId)
-            return (
-              <div key={s.id} style={{ borderBottom: i < displayedSorties.length - 1 ? '1px solid var(--line)' : 'none' }}>
-                <SortieRow sortie={s} bar={bar} onOpen={onOpenBar}/>
-              </div>
-            )
-          })}
-          {user.sorties.length > 2 && (
-            <button onClick={() => setSortiesExpanded(e => !e)} style={{
-              width: '100%', background: 'none', border: 'none',
-              borderTop: '1px solid var(--line)',
-              padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              fontSize: 12, fontWeight: 600, color: 'var(--terracotta)', cursor: 'pointer', fontFamily: 'inherit',
+          {mesAnnonces.length === 0 ? (
+            <div style={{
+              padding: 18, borderRadius: 14, textAlign: 'center',
+              background: 'rgba(198,93,61,0.04)', border: '1px dashed rgba(198,93,61,0.2)',
             }}>
-              {sortiesExpanded ? 'Voir moins' : `Voir tout (${user.sorties.length})`}
-              <Icon name="chevronD" size={13} color="var(--terracotta)"
-                style={{ transform: sortiesExpanded ? 'rotate(180deg)' : 'none' }}/>
-            </button>
+              <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>Tu n'as pas encore proposé de sortie</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {displayedAnnonces.map(a => (
+                <AnnonceCard key={a.id} annonce={a} onOpen={onOpenAnnonce}
+                  badge={{ label: `${a.attending} participant${a.attending !== 1 ? 's' : ''}`, color: 'var(--terracotta)', bg: 'rgba(198,93,61,0.08)' }}
+                />
+              ))}
+              {mesAnnonces.length > 2 && (
+                <button onClick={() => setAnnoncesExpanded(e => !e)} style={{
+                  background: 'none', border: 'none', padding: '8px 0',
+                  fontSize: 12, fontWeight: 600, color: 'var(--terracotta)',
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                }}>
+                  {annoncesExpanded ? 'Voir moins' : `Voir tout (${mesAnnonces.length})`}
+                </button>
+              )}
+            </div>
           )}
         </div>
-      </div>
-      </Wip>
+      )}
+
+      {/* Mes sorties rejointes */}
+      {authUser && (
+        <div style={{ padding: '14px 20px 10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Sorties rejointes</h2>
+            {mesSorties.length > 0 && <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{mesSorties.length} au total</span>}
+          </div>
+          {mesSorties.length === 0 ? (
+            <div style={{
+              padding: 18, borderRadius: 14, textAlign: 'center',
+              background: 'rgba(42,31,23,0.03)', border: '1px dashed var(--line-strong)',
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>Tu n'as rejoint aucune sortie pour l'instant</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {displayedSorties.map(a => (
+                <AnnonceCard key={a.id} annonce={a} onOpen={onOpenAnnonce}
+                  badge={{ label: 'Je viens', color: '#4A7C59', bg: '#4A7C5912' }}
+                />
+              ))}
+              {mesSorties.length > 2 && (
+                <button onClick={() => setSortiesExpanded(e => !e)} style={{
+                  background: 'none', border: 'none', padding: '8px 0',
+                  fontSize: 12, fontWeight: 600, color: 'var(--terracotta)',
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                }}>
+                  {sortiesExpanded ? 'Voir moins' : `Voir tout (${mesSorties.length})`}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Paramètres */}
       <Wip>

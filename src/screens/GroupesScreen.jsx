@@ -1012,7 +1012,7 @@ const SORTIE_TYPES = [
 ]
 
 const NewSortieSheet = ({ onClose, onCreated }) => {
-  const { bars: BARS_DATA, addAnnonce } = useData()
+  const { bars: BARS_DATA, addAnnonce, profile } = useData()
   const { user: authUser } = useAuth()
   const [type, setType] = React.useState('soirée')
   const [bar, setBar] = React.useState(BARS_DATA[0]?.id ?? 'ostal')
@@ -1035,6 +1035,7 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
     const whenText = `${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}. ${time}`
 
     try {
+      const authorName = profile?.name ?? authUser.user_metadata?.name ?? authUser.email?.split('@')[0] ?? 'Moi'
       const row = await createAnnonce({
         title: title.trim(),
         bar: selectedBar?.name ?? bar,
@@ -1042,9 +1043,10 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
         attending: 1,
         max_attending: maxAttending,
         type,
-        author: authUser.user_metadata?.name ?? authUser.email?.split('@')[0] ?? 'Moi',
-        avatar: (authUser.user_metadata?.name ?? 'M')[0].toUpperCase(),
-        color: '#C65D3D',
+        author: authorName,
+        avatar: authorName[0].toUpperCase(),
+        color: profile?.color ?? '#C65D3D',
+        user_id: authUser.id,
       })
       addAnnonce?.({ ...row, emoji: sortieEmoji })
       onCreated?.()

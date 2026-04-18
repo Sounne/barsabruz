@@ -3,14 +3,29 @@ import { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip } from '../components/u
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { fetchAnnonceParticipants } from '../services'
 
 // Screens: Home, Discover, Bar Detail
 
 // ═══════════════ SORTIE DETAIL SHEET ═══════════════
-const SortieDetailSheet = ({ annonce: a, joined, authUser, onJoin, onClose }) => {
+const AVATAR_COLORS = ['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D', '#3A6AB0']
+
+const SortieDetailSheet = ({ annonce: a, joined, isCreator, authUser, onJoin, onUnjoin, onDelete, onClose }) => {
   const isFull = a.attending >= a.maxAttending
-  const canJoin = authUser && !joined && !isFull
-  const COLORS = ['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D', '#3A6AB0']
+  const canJoin = authUser && !joined && !isFull && !isCreator
+  const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [participants, setParticipants] = React.useState(null)
+
+  // Fetch real participants on open
+  React.useEffect(() => {
+    if (!a.id || typeof a.id !== 'string' || a.id.startsWith('p')) return
+    fetchAnnonceParticipants(a.id)
+      .then(setParticipants)
+      .catch(() => {})
+  }, [a.id])
+
+  const displayParticipants = participants ?? []
+  const bubbleCount = Math.min(a.attending, 5)
 
   return (
     <div style={{
@@ -21,29 +36,43 @@ const SortieDetailSheet = ({ annonce: a, joined, authUser, onJoin, onClose }) =>
       <div onClick={e => e.stopPropagation()} style={{
         width: '100%', background: 'var(--paper)',
         borderTopLeftRadius: 28, borderTopRightRadius: 28,
-        maxHeight: '82%', overflow: 'auto',
+        maxHeight: '88%', overflow: 'auto',
         animation: 'slideUp 0.25s',
       }}>
         <div style={{ height: 4, background: a.color, borderRadius: '28px 28px 0 0' }}/>
-        <div style={{ padding: '20px 20px 40px' }}>
+        <div style={{ padding: '20px 20px 44px' }}>
 
           {/* Author + close */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar letter={a.avatar} color={a.color} size={40}/>
+              <Avatar letter={a.avatar} color={a.color} size={42}/>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{a.author}</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>propose une sortie</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>
+                  {isCreator ? 'Ta sortie' : 'propose une sortie'}
+                </div>
               </div>
             </div>
-            <button onClick={onClose} style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'rgba(42,31,23,0.08)', border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
-            }}>
-              <Icon name="close" size={16} color="var(--ink-mute)"/>
-            </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {isCreator && (
+                <button onClick={() => setConfirmDelete(true)} style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: 'rgba(198,93,61,0.1)', border: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}>
+                  <Icon name="trash" size={15} color="var(--terracotta)"/>
+                </button>
+              )}
+              <button onClick={onClose} style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: 'rgba(42,31,23,0.08)', border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}>
+                <Icon name="close" size={16} color="var(--ink-mute)"/>
+              </button>
+            </div>
           </div>
 
           {/* Title */}
@@ -83,13 +112,19 @@ const SortieDetailSheet = ({ annonce: a, joined, authUser, onJoin, onClose }) =>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                {[...Array(Math.min(a.attending, 5))].map((_, i) => (
-                  <div key={i} style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: COLORS[i % COLORS.length],
-                    border: '2px solid #fff', marginLeft: i === 0 ? 0 : -10,
-                  }}/>
-                ))}
+                {displayParticipants.length > 0
+                  ? displayParticipants.slice(0, 5).map((p, i) => (
+                      <Avatar key={p.user_id} letter={p.avatar_letter} color={p.color} size={28}
+                        style={{ marginLeft: i === 0 ? 0 : -10, border: '2px solid #fff' }}/>
+                    ))
+                  : [...Array(bubbleCount)].map((_, i) => (
+                      <div key={i} style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: AVATAR_COLORS[i % AVATAR_COLORS.length],
+                        border: '2px solid #fff', marginLeft: i === 0 ? 0 : -10,
+                      }}/>
+                    ))
+                }
                 {a.attending > 5 && (
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%',
@@ -100,7 +135,20 @@ const SortieDetailSheet = ({ annonce: a, joined, authUser, onJoin, onClose }) =>
                 )}
               </div>
             </div>
-            <div style={{ height: 4, borderRadius: 999, background: 'rgba(42,31,23,0.08)' }}>
+
+            {/* Named participants list */}
+            {displayParticipants.length > 0 && (
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {displayParticipants.map(p => (
+                  <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Avatar letter={p.avatar_letter} color={p.color} size={24}/>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-soft)' }}>{p.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ height: 4, borderRadius: 999, background: 'rgba(42,31,23,0.08)', marginTop: 10 }}>
               <div style={{
                 height: '100%', borderRadius: 999,
                 background: isFull ? 'var(--terracotta)' : a.color,
@@ -110,18 +158,77 @@ const SortieDetailSheet = ({ annonce: a, joined, authUser, onJoin, onClose }) =>
             </div>
           </div>
 
-          {/* CTA */}
-          <button onClick={onJoin} disabled={!canJoin} style={{
-            width: '100%', marginTop: 14,
-            padding: '15px 0', borderRadius: 14,
-            background: joined ? '#4A7C59' : isFull ? 'var(--line)' : !authUser ? 'var(--ink-mute)' : 'var(--terracotta)',
-            color: '#fff', border: 'none',
-            fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
-            cursor: canJoin ? 'pointer' : 'default',
-            transition: 'background 0.15s',
-          }}>
-            {joined ? '✓ Tu participes à cette sortie' : isFull ? 'Complet' : !authUser ? 'Connecte-toi pour rejoindre' : 'Je viens !'}
-          </button>
+          {/* CTAs */}
+          {isCreator ? (
+            <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: 'rgba(198,93,61,0.06)', textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)' }}>
+              C'est ta sortie · {a.attending} personne{a.attending !== 1 ? 's' : ''} participe{a.attending !== 1 ? 'nt' : ''}
+            </div>
+          ) : joined ? (
+            <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
+              <div style={{
+                flex: 1, padding: '14px 0', borderRadius: 14, textAlign: 'center',
+                background: '#4A7C5915', border: '1.5px solid #4A7C59',
+                fontSize: 14, fontWeight: 600, color: '#4A7C59',
+              }}>
+                ✓ Tu participes
+              </div>
+              <button onClick={onUnjoin} style={{
+                padding: '14px 18px', borderRadius: 14,
+                background: '#fff', border: '1.5px solid var(--line)',
+                fontSize: 13, fontWeight: 600, color: 'var(--ink-mute)',
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}>
+                Se désinscrire
+              </button>
+            </div>
+          ) : (
+            <button onClick={onJoin} disabled={!canJoin} style={{
+              width: '100%', marginTop: 14,
+              padding: '15px 0', borderRadius: 14,
+              background: isFull ? 'var(--line)' : !authUser ? 'var(--ink-mute)' : 'var(--terracotta)',
+              color: '#fff', border: 'none',
+              fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
+              cursor: canJoin ? 'pointer' : 'default',
+              transition: 'background 0.15s',
+            }}>
+              {isFull ? 'Complet' : !authUser ? 'Connecte-toi pour rejoindre' : 'Je viens !'}
+            </button>
+          )}
+
+          {/* Delete confirmation */}
+          {confirmDelete && (
+            <div style={{
+              position: 'fixed', inset: 0, zIndex: 300,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 24,
+            }} onClick={() => setConfirmDelete(false)}>
+              <div onClick={e => e.stopPropagation()} style={{
+                background: '#fff', borderRadius: 20, padding: 24,
+                width: '100%', maxWidth: 340,
+                boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Annuler la sortie ?</div>
+                <div style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 24 }}>
+                  Les participants seront prévenus. Cette action est irréversible.
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setConfirmDelete(false)} style={{
+                    flex: 1, padding: '12px 0', borderRadius: 12,
+                    background: 'var(--paper)', color: 'var(--ink)',
+                    border: '1px solid var(--line)', fontSize: 14, fontWeight: 600,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                  }}>Garder</button>
+                  <button onClick={() => { onDelete(); onClose() }} style={{
+                    flex: 1, padding: '12px 0', borderRadius: 12,
+                    background: 'var(--terracotta)', color: '#fff',
+                    border: 'none', fontSize: 14, fontWeight: 600,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                  }}>Annuler la sortie</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -130,21 +237,27 @@ const SortieDetailSheet = ({ annonce: a, joined, authUser, onJoin, onClose }) =>
 
 // ═══════════════ HOME SCREEN ═══════════════
 const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab }) => {
-  const { bars: allBars, annonces: publics, joinAnnonce } = useData()
+  const { bars: allBars, annonces: publics, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds } = useData()
   const { user: authUser } = useAuth()
   const [search, setSearch] = React.useState('')
-  const [joined, setJoined] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('joinedAnnonces') || '{}') } catch { return {} }
-  })
   const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
 
   const handleJoin = (annonceId, currentAttending) => {
-    const isFull = (publics.find(a => a.id === annonceId)?.attending ?? currentAttending) >= (publics.find(a => a.id === annonceId)?.maxAttending ?? 0)
-    if (!authUser || joined[annonceId] || isFull) return
-    const next = { ...joined, [annonceId]: true }
-    setJoined(next)
-    try { localStorage.setItem('joinedAnnonces', JSON.stringify(next)) } catch {}
+    const a = publics.find(x => x.id === annonceId)
+    if (!authUser || joinedAnnonceIds.has(annonceId) || (a && a.attending >= a.maxAttending)) return
     joinAnnonce(annonceId, currentAttending)
+    // Keep selectedAnnonce in sync
+    setSelectedAnnonce(prev => prev?.id === annonceId ? { ...prev, attending: prev.attending + 1 } : prev)
+  }
+
+  const handleUnjoin = (annonceId) => {
+    unjoinAnnonce(annonceId)
+    setSelectedAnnonce(prev => prev?.id === annonceId ? { ...prev, attending: Math.max(0, prev.attending - 1) } : prev)
+  }
+
+  const handleDelete = (annonceId) => {
+    deleteAnnonce(annonceId)
+    setSelectedAnnonce(null)
   }
   const bars = search
     ? allBars.filter(b => b.name.toLowerCase().includes(search.toLowerCase()) || b.tagline.toLowerCase().includes(search.toLowerCase()) || b.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
@@ -162,7 +275,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
       {/* Header */}
       <div style={{ padding: '16px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div style={{ fontSize: 13, color: 'var(--ink-mute)', fontWeight: 500 }}>{greeting}, Enzo</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-mute)', fontWeight: 500 }}>{greeting}, {authUser ? userData.name : 'toi'}</div>
           <div className="serif" style={{ fontSize: 26, fontWeight: 600, marginTop: 2, lineHeight: 1 }}>
             Où allez-vous ce soir ?
           </div>
@@ -288,67 +401,84 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
         ))}
       </div>
 
-      {/* Annonces publiques */}
-      {publics.length > 0 && (
-        <>
-          <div style={{ padding: '22px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h2 className="serif" style={{ fontSize: 20, margin: 0, fontWeight: 600 }}>Ils sortent ce soir</h2>
-              <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>Rejoignez une soirée en un clic</div>
-            </div>
-            {authUser && onNewSortie && (
-              <button onClick={onNewSortie} style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '7px 13px', borderRadius: 999,
-                background: 'var(--terracotta)', color: '#fff',
-                border: 'none', fontSize: 12, fontWeight: 600,
-                fontFamily: 'inherit', cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(198,93,61,0.3)',
-              }}>
-                <Icon name="plus" size={13} color="#fff"/>
-                Proposer
-              </button>
-            )}
-          </div>
-          <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {publics.slice(0, 5).map(a => {
-              const hasJoined = joined[a.id]
-              const isFull = a.attending >= a.maxAttending
-              const canJoin = authUser && !hasJoined && !isFull
+      {/* Ils sortent ce soir */}
+      <div style={{ padding: '22px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 className="serif" style={{ fontSize: 20, margin: 0, fontWeight: 600 }}>Ils sortent ce soir</h2>
+          <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>Rejoignez une soirée en un clic</div>
+        </div>
+        {authUser && onNewSortie && (
+          <button onClick={onNewSortie} style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '7px 13px', borderRadius: 999,
+            background: 'var(--terracotta)', color: '#fff',
+            border: 'none', fontSize: 12, fontWeight: 600,
+            fontFamily: 'inherit', cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(198,93,61,0.3)',
+          }}>
+            <Icon name="plus" size={13} color="#fff"/>
+            Proposer
+          </button>
+        )}
+      </div>
 
-              return (
-                <div key={a.id} onClick={() => setSelectedAnnonce(a)} style={{
-                  background: '#fff', borderRadius: 16, padding: 14,
-                  boxShadow: 'var(--shadow-card)',
-                  borderLeft: `3px solid ${a.color}`,
-                  cursor: 'pointer',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Avatar letter={a.avatar} color={a.color} size={32}/>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                        <b>{a.author}</b> propose
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.when} · {a.bar}</div>
+      {publics.length === 0 ? (
+        <div onClick={authUser ? onNewSortie : undefined} style={{
+          margin: '0 20px',
+          padding: 24, borderRadius: 16, textAlign: 'center',
+          background: 'linear-gradient(135deg, rgba(198,93,61,0.06), rgba(217,164,74,0.06))',
+          border: '1px dashed rgba(198,93,61,0.3)',
+          cursor: authUser ? 'pointer' : 'default',
+        }}>
+          <div style={{ fontSize: 28 }}>🍻</div>
+          <div className="serif" style={{ fontSize: 16, fontWeight: 600, marginTop: 8 }}>
+            {authUser ? 'Sois le premier à proposer !' : 'Pas encore de sorties ce soir'}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>
+            {authUser ? 'Organise une soirée et invite la communauté' : 'Connecte-toi pour en proposer une'}
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {publics.slice(0, 5).map(a => {
+            const hasJoined = joinedAnnonceIds.has(a.id)
+            const isFull = a.attending >= a.maxAttending
+            const isCreator = authUser && a.user_id === authUser.id
+            const canJoin = authUser && !hasJoined && !isFull && !isCreator
+
+            return (
+              <div key={a.id} onClick={() => setSelectedAnnonce(a)} style={{
+                background: '#fff', borderRadius: 16, padding: 14,
+                boxShadow: 'var(--shadow-card)',
+                borderLeft: `3px solid ${a.color}`,
+                cursor: 'pointer',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Avatar letter={a.avatar} color={a.color} size={32}/>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+                      <b>{a.author}</b>{isCreator ? ' · Ta sortie' : ' propose'}
                     </div>
-                    <div style={{ display: 'flex' }}>
-                      {[...Array(Math.min(a.attending, 3))].map((_, i) => (
-                        <div key={i} style={{
-                          width: 22, height: 22, borderRadius: '50%',
-                          background: ['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D'][i],
-                          border: '2px solid #fff',
-                          marginLeft: i === 0 ? 0 : -8,
-                        }}/>
-                      ))}
-                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.when} · {a.bar}</div>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10, lineHeight: 1.3 }}>
-                    {a.title}
+                  <div style={{ display: 'flex' }}>
+                    {[...Array(Math.min(a.attending, 3))].map((_, i) => (
+                      <div key={i} style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: AVATAR_COLORS[i % AVATAR_COLORS.length],
+                        border: '2px solid #fff', marginLeft: i === 0 ? 0 : -8,
+                      }}/>
+                    ))}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                    <div style={{ fontSize: 12, color: isFull ? 'var(--terracotta)' : 'var(--ink-mute)' }}>
-                      {a.attending}/{a.maxAttending} places{isFull ? ' · Complet' : ''}
-                    </div>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10, lineHeight: 1.3 }}>
+                  {a.title}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                  <div style={{ fontSize: 12, color: isFull ? 'var(--terracotta)' : 'var(--ink-mute)' }}>
+                    {a.attending}/{a.maxAttending} places{isFull ? ' · Complet' : ''}
+                  </div>
+                  {!isCreator && (
                     <button
                       onClick={e => { e.stopPropagation(); handleJoin(a.id, a.attending) }}
                       disabled={!canJoin}
@@ -364,24 +494,24 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                     >
                       {hasJoined ? '✓ Je viens' : isFull ? 'Complet' : !authUser ? 'Connecte-toi' : 'Je viens'}
                     </button>
-                  </div>
+                  )}
                 </div>
-              )
-            })}
-          </div>
-        </>
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {/* Sortie detail sheet */}
       {selectedAnnonce && (
         <SortieDetailSheet
           annonce={selectedAnnonce}
-          joined={!!joined[selectedAnnonce.id]}
+          joined={joinedAnnonceIds.has(selectedAnnonce.id)}
+          isCreator={!!(authUser && selectedAnnonce.user_id === authUser.id)}
           authUser={authUser}
-          onJoin={() => {
-            handleJoin(selectedAnnonce.id, selectedAnnonce.attending)
-            setSelectedAnnonce(a => a ? { ...a, attending: joined[a.id] ? a.attending : a.attending + 1 } : null)
-          }}
+          onJoin={() => handleJoin(selectedAnnonce.id, selectedAnnonce.attending)}
+          onUnjoin={() => handleUnjoin(selectedAnnonce.id)}
+          onDelete={() => handleDelete(selectedAnnonce.id)}
           onClose={() => setSelectedAnnonce(null)}
         />
       )}

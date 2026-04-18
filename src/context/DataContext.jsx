@@ -1,5 +1,11 @@
 import React from 'react'
-import { fetchBars, fetchAnnonces, fetchProfile, updateProfile, joinAnnonce as svcJoinAnnonce } from '../services'
+import {
+  fetchBars, fetchAnnonces, fetchProfile, updateProfile,
+  joinAnnonce as svcJoinAnnonce,
+  joinAnnonceUser, unjoinAnnonceUser,
+  fetchJoinedAnnonceIds, deleteAnnonce as svcDeleteAnnonce,
+  subscribeToAnnonces, unsubscribeChannel,
+} from '../services'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
 
@@ -10,6 +16,7 @@ export function DataProvider({ children }) {
   const [bars, setBars] = React.useState(null)
   const [annonces, setAnnonces] = React.useState(null)
   const [profile, setProfile] = React.useState(null)
+  const [myJoins, setMyJoins] = React.useState(new Set())
   const [loading, setLoading] = React.useState(true)
 
   // Load bars + annonces once
@@ -39,6 +46,19 @@ export function DataProvider({ children }) {
     return () => { cancelled = true }
   }, [])
 
+  // Real-time subscription to annonces (new sorties, count updates, deletions)
+  React.useEffect(() => {
+    let channel
+    try {
+      channel = subscribeToAnnonces(() => {
+        fetchAnnonces()
+          .then(data => { if (data?.length) setAnnonces(data) })
+          .catch(() => {})
+      })
+    } catch {}
+    return () => { if (channel) unsubscribeChannel(channel) }
+  }, [])
+
   // Load profile when auth user changes
   React.useEffect(() => {
     if (!user) {
@@ -50,7 +70,14 @@ export function DataProvider({ children }) {
       .catch(() => setProfile(null))
   }, [user?.id])
 
-  // Save profile to Supabase and update local state
+  // Load joined annonce IDs when auth user changes
+  React.useEffect(() => {
+    if (!user) { setMyJoins(new Set()); return }
+    fetchJoinedAnnonceIds(user.id)
+      .then(ids => setMyJoins(ids))
+      .catch(() => {})
+  }, [user?.id])
+
   const saveProfile = React.useCallback(async (updates) => {
     if (!user) return
     const updated = await updateProfile(user.id, updates)
@@ -58,7 +85,6 @@ export function DataProvider({ children }) {
     return updated
   }, [user?.id])
 
-  // Build user object: Supabase profile when logged in, mock otherwise
   const userData = profile ? {
     name: profile.name,
     handle: profile.handle,
@@ -71,11 +97,50 @@ export function DataProvider({ children }) {
     annonces: USER_DATA.annonces,
   } : USER_DATA
 
+  // Join — optimistic update, then RPC (falls back to simple increment)
   const joinAnnonce = React.useCallback(async (annonceId, currentAttending) => {
-    setAnnonces(prev => (prev ?? []).map(a => a.id === annonceId ? { ...a, attending: currentAttending + 1 } : a))
+    if (!user) return
+    setAnnonces(prev => (prev ?? []).map(a =>
+      a.id === annonceId ? { ...a, attending: a.attending + 1 } : a
+    ))
+    setMyJoins(prev => new Set([...prev, annonceId]))
     try {
-      const newCount = await svcJoinAnnonce(annonceId, currentAttending)
-      setAnnonces(prev => (prev ?? []).map(a => a.id === annonceId ? { ...a, attending: newCount } : a))
+      const newCount = await joinAnnonceUser(annonceId, user.id)
+      setAnnonces(prev => (prev ?? []).map(a =>
+        a.id === annonceId ? { ...a, attending: newCount } : a
+      ))
+    } catch {
+      // RPC not available yet — fall back to count increment
+      try {
+        const newCount = await svcJoinAnnonce(annonceId, currentAttending)
+        setAnnonces(prev => (prev ?? []).map(a =>
+          a.id === annonceId ? { ...a, attending: newCount } : a
+        ))
+      } catch {}
+    }
+  }, [user?.id])
+
+  // Unjoin — optimistic update, then RPC
+  const unjoinAnnonce = React.useCallback(async (annonceId) => {
+    if (!user) return
+    setAnnonces(prev => (prev ?? []).map(a =>
+      a.id === annonceId ? { ...a, attending: Math.max(0, a.attending - 1) } : a
+    ))
+    setMyJoins(prev => { const n = new Set(prev); n.delete(annonceId); return n })
+    try {
+      const newCount = await unjoinAnnonceUser(annonceId, user.id)
+      setAnnonces(prev => (prev ?? []).map(a =>
+        a.id === annonceId ? { ...a, attending: newCount } : a
+      ))
+    } catch {}
+  }, [user?.id])
+
+  // Delete own annonce — optimistic removal
+  const deleteAnnonce = React.useCallback(async (annonceId) => {
+    setAnnonces(prev => (prev ?? []).filter(a => a.id !== annonceId))
+    setMyJoins(prev => { const n = new Set(prev); n.delete(annonceId); return n })
+    try {
+      await svcDeleteAnnonce(annonceId)
     } catch {}
   }, [])
 
@@ -90,7 +155,10 @@ export function DataProvider({ children }) {
     profile,
     saveProfile,
     joinAnnonce,
+    unjoinAnnonce,
+    deleteAnnonce,
     addAnnonce,
+    joinedAnnonceIds: myJoins,
     loading,
   }
 

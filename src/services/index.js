@@ -69,6 +69,62 @@ export async function joinAnnonce(annonceId, currentAttending) {
   return data.attending
 }
 
+export async function joinAnnonceUser(annonceId, userId) {
+  const { data, error } = await supabase.rpc('join_annonce', {
+    p_annonce_id: annonceId,
+    p_user_id: userId,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function unjoinAnnonceUser(annonceId, userId) {
+  const { data, error } = await supabase.rpc('unjoin_annonce', {
+    p_annonce_id: annonceId,
+    p_user_id: userId,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function fetchJoinedAnnonceIds(userId) {
+  const { data, error } = await supabase
+    .from('annonce_participants')
+    .select('annonce_id')
+    .eq('user_id', userId)
+  if (error) throw error
+  return new Set(data.map(r => r.annonce_id))
+}
+
+export async function fetchAnnonceParticipants(annonceId) {
+  const { data, error } = await supabase
+    .from('annonce_participants')
+    .select('user_id, joined_at, profiles(name, avatar_letter, color)')
+    .eq('annonce_id', annonceId)
+    .order('joined_at')
+  if (error) throw error
+  return data.map(r => ({ ...r.profiles, user_id: r.user_id, joined_at: r.joined_at }))
+}
+
+export async function deleteAnnonce(annonceId) {
+  const { error } = await supabase
+    .from('annonces')
+    .delete()
+    .eq('id', annonceId)
+  if (error) throw error
+}
+
+export function subscribeToAnnonces(callback) {
+  return supabase
+    .channel('public:annonces')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'annonces' }, callback)
+    .subscribe()
+}
+
+export function unsubscribeChannel(channel) {
+  supabase.removeChannel(channel)
+}
+
 // ─────────── EVENTS ───────────
 
 export async function joinEvent(eventId, userId) {
