@@ -60,7 +60,7 @@ const App = () => {
         ) : tab === 'groupes' ? (
           <GroupesScreen onOpenGroup={navigate.openGroup} onNew={() => setNewAnnonce(true)}/>
         ) : (
-          <AccountScreen onOpenAnnonce={navigate.openAnnonce}/>
+          <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar}/>
         )}
       </div>
 

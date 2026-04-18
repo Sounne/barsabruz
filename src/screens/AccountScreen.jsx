@@ -1,18 +1,183 @@
 import React from 'react'
-import { USER_DATA } from '../data'
-import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { USER_DATA, BARS_DATA } from '../data'
+import { Icon, Avatar, BarHero, shade } from '../components/ui'
 
-// Account / Profile screen
+// ─────────── EDIT PROFILE SHEET ───────────
+const EditProfileSheet = ({ user, onSave, onClose }) => {
+  const [name, setName] = React.useState(user.name);
+  const [handle, setHandle] = React.useState(user.handle);
+  const [bio, setBio] = React.useState(user.bio || '');
 
-const AccountScreen = ({ onOpenAnnonce }) => {
-  const user = USER_DATA;
+  const inputStyle = {
+    width: '100%', padding: '12px 14px',
+    border: '1.5px solid var(--line)', borderRadius: 12,
+    fontSize: 14, fontFamily: 'inherit', color: 'var(--ink)',
+    background: '#fff', outline: 'none', boxSizing: 'border-box',
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, background: 'rgba(42,31,23,0.45)',
+        zIndex: 80, animation: 'fadeIn 0.15s ease',
+      }}/>
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'var(--paper)', borderRadius: '24px 24px 0 0',
+        padding: '0 20px 40px', zIndex: 90,
+        maxWidth: 520, margin: '0 auto',
+        animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
+        boxShadow: '0 -8px 40px rgba(42,31,23,0.14)',
+      }}>
+        {/* Handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 18px' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--line-strong)' }}/>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+          <h2 className="serif" style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Modifier le profil</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer' }}>
+            <Icon name="close" size={20} color="var(--ink-mute)"/>
+          </button>
+        </div>
+
+        {/* Avatar */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+          <div style={{ position: 'relative' }}>
+            <Avatar letter={name[0]?.toUpperCase() || 'E'} color={user.color} size={80} ring/>
+            <div style={{
+              position: 'absolute', bottom: 0, right: 0,
+              width: 26, height: 26, borderRadius: '50%',
+              background: 'var(--terracotta)', border: '2px solid var(--paper)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="plus" size={13} color="#fff"/>
+            </div>
+          </div>
+        </div>
+
+        {/* Fields */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+              Prénom
+            </label>
+            <input value={name} onChange={e => setName(e.target.value)} style={inputStyle}/>
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+              Identifiant
+            </label>
+            <input value={handle} onChange={e => setHandle(e.target.value)} style={inputStyle}/>
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+              Bio
+            </label>
+            <textarea value={bio} onChange={e => setBio(e.target.value)} rows={2}
+              style={{ ...inputStyle, resize: 'none', lineHeight: 1.5 }}/>
+          </div>
+        </div>
+
+        <button onClick={() => onSave({ name, handle, bio })} style={{
+          marginTop: 20, width: '100%', padding: 14,
+          background: 'var(--terracotta)', color: '#fff',
+          border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600,
+          fontFamily: 'inherit', cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(198,93,61,0.35)',
+        }}>
+          Enregistrer
+        </button>
+      </div>
+    </>
+  );
+};
+
+// ─────────── FAVORITE BAR CARD ───────────
+const FavBarCard = ({ bar, onOpen }) => (
+  <div onClick={() => onOpen(bar.id)}
+    style={{
+      flex: '0 0 170px', borderRadius: 16, overflow: 'hidden',
+      boxShadow: 'var(--shadow-card)', cursor: 'pointer', position: 'relative',
+    }}>
+    <BarHero bar={bar} height={110} small/>
+    {/* overlay name */}
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'linear-gradient(to top, rgba(0,0,0,0.6) 40%, transparent 100%)',
+      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+      padding: '0 10px 10px',
+    }}>
+      <div className="serif" style={{ color: '#fff', fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}>{bar.name}</div>
+      <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, marginTop: 2 }}>{bar.tagline.split(' · ')[0]}</div>
+    </div>
+    {/* heart badge */}
+    <div style={{
+      position: 'absolute', top: 8, right: 8,
+      width: 26, height: 26, borderRadius: '50%',
+      background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: '1px solid rgba(255,255,255,0.3)',
+    }}>
+      <Icon name="heart" size={13} color="#fff" stroke={2}/>
+    </div>
+  </div>
+);
+
+// ─────────── SORTIE ROW ───────────
+const SortieRow = ({ sortie, bar, onOpen }) => (
+  <div onClick={() => onOpen?.(bar?.id)}
+    style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '11px 14px',
+      cursor: bar ? 'pointer' : 'default',
+    }}>
+    {/* colored dot + line */}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, alignSelf: 'stretch', paddingTop: 2 }}>
+      <div style={{
+        width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+        background: bar?.color || 'var(--terracotta)',
+        boxShadow: `0 0 0 3px ${bar ? bar.color + '28' : 'rgba(198,93,61,0.16)'}`,
+      }}/>
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {sortie.title}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+        <span style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 500 }}>{sortie.bar}</span>
+        <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-mute)', flexShrink: 0 }}/>
+        <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{sortie.date} · {sortie.time}</span>
+      </div>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--ink-mute)', flexShrink: 0 }}>
+      <Icon name="users" size={11}/>
+      <span>{sortie.with}</span>
+    </div>
+  </div>
+);
+
+// ─────────── ACCOUNT SCREEN ───────────
+const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
+  const [user, setUser] = React.useState(USER_DATA);
+  const [editing, setEditing] = React.useState(false);
+  const [sortiesExpanded, setSortiesExpanded] = React.useState(false);
+
+  const favBars = BARS_DATA.filter(b => user.favorites.includes(b.id));
+  const displayedSorties = sortiesExpanded ? user.sorties : user.sorties.slice(0, 2);
+
+  const handleSave = (updated) => {
+    setUser(prev => ({ ...prev, ...updated }));
+    setEditing(false);
+  };
+
   return (
     <div style={{ paddingBottom: 100 }}>
       {/* Banner */}
       <div style={{
         height: 160,
-        background: 'linear-gradient(135deg, var(--terracotta), var(--ochre))',
-        position: 'relative',
+        background: `linear-gradient(135deg, ${user.color}, ${shade(user.color, 20)})`,
+        position: 'relative', overflow: 'hidden',
       }}>
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }}>
           <defs>
@@ -24,6 +189,7 @@ const AccountScreen = ({ onOpenAnnonce }) => {
         </svg>
       </div>
 
+      {/* Profile card */}
       <div style={{
         margin: '-54px 20px 0', background: 'var(--paper)',
         borderRadius: 20, padding: '18px', position: 'relative',
@@ -35,16 +201,23 @@ const AccountScreen = ({ onOpenAnnonce }) => {
             <div className="serif" style={{ fontSize: 22, fontWeight: 600 }}>{user.name}</div>
             <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>{user.handle}</div>
           </div>
-          <button style={{
+          <button onClick={() => setEditing(true)} style={{
             background: '#fff', border: '1px solid var(--line)',
             padding: '8px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600,
             fontFamily: 'inherit', cursor: 'pointer',
           }}>Modifier</button>
         </div>
-        <div style={{ display: 'flex', gap: 20, marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+
+        {user.bio && (
+          <div style={{ marginTop: 12, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
+            {user.bio}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
           {[
-            { n: 12, l: 'Sorties' },
-            { n: 4, l: 'Groupes' },
+            { n: user.sorties.length, l: 'Sorties' },
+            { n: user.groups.length, l: 'Groupes' },
             { n: 28, l: 'Amis' },
           ].map(s => (
             <div key={s.l}>
@@ -55,8 +228,32 @@ const AccountScreen = ({ onOpenAnnonce }) => {
         </div>
       </div>
 
+      {/* Bars favoris */}
+      {favBars.length > 0 && (
+        <div style={{ padding: '22px 0 10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 20px', marginBottom: 12 }}>
+            <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Bars favoris</h2>
+            <span style={{ fontSize: 12, color: 'var(--terracotta)', fontWeight: 600 }}>{favBars.length} bar{favBars.length > 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 20px 4px', scrollSnapType: 'x mandatory' }} className="noscroll">
+            {favBars.map(bar => (
+              <FavBarCard key={bar.id} bar={bar} onOpen={onOpenBar}/>
+            ))}
+            {/* Add more CTA */}
+            <div onClick={() => {}} style={{
+              flex: '0 0 80px', borderRadius: 16, border: '1.5px dashed var(--line-strong)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 6, cursor: 'pointer', minHeight: 110, color: 'var(--ink-mute)',
+            }}>
+              <Icon name="plus" size={18} color="var(--ink-mute)"/>
+              <span style={{ fontSize: 10, fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>Ajouter</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mes annonces */}
-      <div style={{ padding: '22px 20px 10px' }}>
+      <div style={{ padding: '14px 20px 10px' }}>
         <h2 className="serif" style={{ fontSize: 18, margin: '0 0 10px', fontWeight: 600 }}>Mes annonces</h2>
         {user.annonces.map(a => (
           <div key={a.id} onClick={() => onOpenAnnonce?.(a)}
@@ -81,13 +278,43 @@ const AccountScreen = ({ onOpenAnnonce }) => {
         ))}
       </div>
 
+      {/* Mes sorties */}
+      <div style={{ padding: '14px 20px 10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Mes sorties</h2>
+          <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{user.sorties.length} au total</span>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+          {displayedSorties.map((s, i) => {
+            const bar = BARS_DATA.find(b => b.id === s.barId);
+            return (
+              <div key={s.id} style={{ borderBottom: i < displayedSorties.length - 1 ? '1px solid var(--line)' : 'none' }}>
+                <SortieRow sortie={s} bar={bar} onOpen={onOpenBar}/>
+              </div>
+            );
+          })}
+          {user.sorties.length > 2 && (
+            <button onClick={() => setSortiesExpanded(e => !e)} style={{
+              width: '100%', background: 'none', border: 'none',
+              borderTop: '1px solid var(--line)',
+              padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              fontSize: 12, fontWeight: 600, color: 'var(--terracotta)', cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              {sortiesExpanded ? 'Voir moins' : `Voir tout (${user.sorties.length})`}
+              <Icon name={sortiesExpanded ? 'chevronD' : 'chevronD'} size={13} color="var(--terracotta)"
+                style={{ transform: sortiesExpanded ? 'rotate(180deg)' : 'none' }}/>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Paramètres */}
       <div style={{ padding: '14px 20px 10px' }}>
         <h2 className="serif" style={{ fontSize: 18, margin: '0 0 10px', fontWeight: 600 }}>Paramètres</h2>
         <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
           {[
             { icon: 'bell', label: 'Notifications', detail: 'Actives' },
-            { icon: 'heart', label: 'Bars favoris', detail: '2' },
+            { icon: 'heart', label: 'Bars favoris', detail: String(favBars.length) },
             { icon: 'users', label: 'Mes amis', detail: '28' },
             { icon: 'lock', label: 'Confidentialité', detail: '' },
             { icon: 'globe', label: 'Langue', detail: 'Français' },
@@ -122,6 +349,11 @@ const AccountScreen = ({ onOpenAnnonce }) => {
           Bars à Bruz · v1.0 · Fait par Enzo
         </div>
       </div>
+
+      {/* Edit profile sheet */}
+      {editing && (
+        <EditProfileSheet user={user} onSave={handleSave} onClose={() => setEditing(false)}/>
+      )}
     </div>
   );
 };

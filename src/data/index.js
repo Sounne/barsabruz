@@ -105,6 +105,14 @@ export const USER_DATA = {
   handle: "@enzo",
   avatar: "E",
   color: "#C65D3D",
+  bio: "Amateur de bières artisanales & cocktails. Bruz 🍻",
+  favorites: ['ostal', 'arriere-cour'],
+  sorties: [
+    { id: 's1', title: "Soirée dégustation vins du Languedoc", bar: "L'Ostal", barId: 'ostal', date: "Ven. 18 avr.", time: "19:30", with: 4 },
+    { id: 's2', title: "Quiz spécial 90s", bar: "Le Pignom", barId: 'pignom', date: "Mer. 9 avr.", time: "21:00", with: 3 },
+    { id: 's3', title: "Brunch du dimanche", bar: "L'Arrière-Cour", barId: 'arriere-cour', date: "Dim. 6 avr.", time: "11:30", with: 2 },
+    { id: 's4', title: "Afterwork stagiaires", bar: "Le Pignom", barId: 'pignom', date: "Ven. 28 mars", time: "18:00", with: 5 },
+  ],
   groups: [
     { id: 'g1', name: "Les Bruzois", members: 7, type: "permanent", lastMsg: "On se fait Le Pignom ce soir ?", time: "14:32", unread: 3, emoji: "🍻" },
     { id: 'g2', name: "Ker Lann 2026", members: 24, type: "permanent", lastMsg: "Qui est chaud pour l'Ostal vendredi ?", time: "12:18", unread: 7, emoji: "🎓" },
