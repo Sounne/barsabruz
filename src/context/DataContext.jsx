@@ -4,8 +4,8 @@ import {
   joinAnnonce as svcJoinAnnonce,
   joinAnnonceUser, unjoinAnnonceUser,
   fetchJoinedAnnonceIds, deleteAnnonce as svcDeleteAnnonce,
-  subscribeToAnnonces, unsubscribeChannel,
-  fetchAllAnnonceParticipants,
+  subscribeToAnnonces, subscribeToAnnonceParticipants, unsubscribeChannel,
+  fetchAnnonceParticipants, fetchAllAnnonceParticipants,
 } from '../services'
 import { getAccessibleGroups, getFriends } from '../lib/chatApi'
 import { BARS_DATA, USER_DATA } from '../data'
@@ -32,7 +32,14 @@ export function DataProvider({ children }) {
     try {
       const map = await fetchAllAnnonceParticipants(ids)
       setParticipantsMap(map)
-    } catch {}
+      setAnnonces(prev => (prev ?? []).map(a =>
+        typeof map[a.id] !== 'undefined'
+          ? { ...a, attending: map[a.id].length }
+          : a
+      ))
+    } catch (err) {
+      console.warn('Failed to load annonce participants:', err?.message ?? err)
+    }
   }, [])
 
   // Load bars + annonces once
@@ -81,6 +88,42 @@ export function DataProvider({ children }) {
     } catch {}
     return () => { if (channel) unsubscribeChannel(channel) }
   }, [])
+
+  // Real-time subscription to annonce participants (join/unjoin updates)
+  React.useEffect(() => {
+    let channel
+    try {
+      channel = subscribeToAnnonceParticipants((payload) => {
+        const annonceId = payload.new?.annonce_id ?? payload.old?.annonce_id
+        if (!annonceId) return
+
+        fetchAnnonceParticipants(annonceId)
+          .then(participants => {
+            setParticipantsMap(prev => ({
+              ...prev,
+              [annonceId]: participants,
+            }))
+            setAnnonces(prev => (prev ?? []).map(a =>
+              a.id === annonceId ? { ...a, attending: participants.length } : a
+            ))
+          })
+          .catch(err => {
+            console.warn('Failed to refresh participants for annonce', annonceId, err?.message ?? err)
+          })
+
+        if (!user) return
+        if (payload.new?.user_id === user.id) {
+          setMyJoins(prev => new Set([...prev, annonceId]))
+        }
+        if (payload.old?.user_id === user.id) {
+          setMyJoins(prev => { const n = new Set(prev); n.delete(annonceId); return n })
+        }
+      })
+    } catch (err) {
+      console.warn('Failed to subscribe to annonce participants:', err?.message ?? err)
+    }
+    return () => { if (channel) unsubscribeChannel(channel) }
+  }, [user?.id])
 
   // Load profile when auth user changes
   React.useEffect(() => {
@@ -156,14 +199,16 @@ export function DataProvider({ children }) {
       setAnnonces(prev => (prev ?? []).map(a =>
         a.id === annonceId ? { ...a, attending: newCount } : a
       ))
-    } catch {
-      // RPC not available yet — fall back to count increment
+    } catch (err) {
+      console.warn('joinAnnonce failed:', err?.message ?? err)
       try {
         const newCount = await svcJoinAnnonce(annonceId, currentAttending)
         setAnnonces(prev => (prev ?? []).map(a =>
           a.id === annonceId ? { ...a, attending: newCount } : a
         ))
-      } catch {}
+      } catch (fallbackErr) {
+        console.warn('Fallback joinAnnonce failed:', fallbackErr?.message ?? fallbackErr)
+      }
     }
   }, [user?.id, profile])
 
@@ -183,7 +228,9 @@ export function DataProvider({ children }) {
       setAnnonces(prev => (prev ?? []).map(a =>
         a.id === annonceId ? { ...a, attending: newCount } : a
       ))
-    } catch {}
+    } catch (err) {
+      console.warn('unjoinAnnonce failed:', err?.message ?? err)
+    }
   }, [user?.id])
 
   // Delete own annonce — optimistic removal

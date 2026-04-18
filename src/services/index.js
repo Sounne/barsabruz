@@ -70,21 +70,53 @@ export async function joinAnnonce(annonceId, currentAttending) {
 }
 
 export async function joinAnnonceUser(annonceId, userId) {
-  const { data, error } = await supabase.rpc('join_annonce', {
-    p_annonce_id: annonceId,
-    p_user_id: userId,
-  })
-  if (error) throw error
-  return data
+  try {
+    const { data, error } = await supabase.rpc('join_annonce', {
+      p_annonce_id: annonceId,
+      p_user_id: userId,
+    })
+    if (error) throw error
+    return data
+  } catch (rpcError) {
+    console.warn('joinAnnonceUser RPC failed, falling back to direct participant insert:', rpcError?.message ?? rpcError)
+    const { error: insertError } = await supabase
+      .from('annonce_participants')
+      .insert([{ annonce_id: annonceId, user_id: userId }])
+    if (insertError && !/duplicate key/i.test(insertError.message)) throw insertError
+
+    const { count, error: countError } = await supabase
+      .from('annonce_participants')
+      .select('annonce_id', { count: 'exact', head: true })
+      .eq('annonce_id', annonceId)
+    if (countError) throw countError
+    return count ?? 0
+  }
 }
 
 export async function unjoinAnnonceUser(annonceId, userId) {
-  const { data, error } = await supabase.rpc('unjoin_annonce', {
-    p_annonce_id: annonceId,
-    p_user_id: userId,
-  })
-  if (error) throw error
-  return data
+  try {
+    const { data, error } = await supabase.rpc('unjoin_annonce', {
+      p_annonce_id: annonceId,
+      p_user_id: userId,
+    })
+    if (error) throw error
+    return data
+  } catch (rpcError) {
+    console.warn('unjoinAnnonceUser RPC failed, falling back to direct participant delete:', rpcError?.message ?? rpcError)
+    const { error: deleteError } = await supabase
+      .from('annonce_participants')
+      .delete()
+      .eq('annonce_id', annonceId)
+      .eq('user_id', userId)
+    if (deleteError) throw deleteError
+
+    const { count, error: countError } = await supabase
+      .from('annonce_participants')
+      .select('annonce_id', { count: 'exact', head: true })
+      .eq('annonce_id', annonceId)
+    if (countError) throw countError
+    return count ?? 0
+  }
 }
 
 export async function fetchJoinedAnnonceIds(userId) {
@@ -134,6 +166,13 @@ export function subscribeToAnnonces(callback) {
   return supabase
     .channel('public:annonces')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'annonces' }, callback)
+    .subscribe()
+}
+
+export function subscribeToAnnonceParticipants(callback) {
+  return supabase
+    .channel('public:annonce_participants')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'annonce_participants' }, callback)
     .subscribe()
 }
 

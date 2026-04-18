@@ -9,11 +9,11 @@ import { useAuth } from '../context/AuthContext'
 // ═══════════════ SORTIE DETAIL SHEET ═══════════════
 
 const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUser, onJoin, onUnjoin, onDelete, onClose }) => {
-  const isFull = a.attending >= a.maxAttending
+  const displayParticipants = participants ?? []
+  const participantCount = Math.max(a.attending, displayParticipants.length)
+  const isFull = participantCount >= a.maxAttending
   const canJoin = authUser && !joined && !isFull && !isCreator
   const [confirmDelete, setConfirmDelete] = React.useState(false)
-
-  const displayParticipants = participants ?? []
 
   return (
     <div style={{
@@ -96,7 +96,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>Participants</div>
                 <div style={{ fontSize: 11, color: isFull ? 'var(--terracotta)' : 'var(--ink-mute)', marginTop: 2 }}>
-                  {a.attending} / {a.maxAttending} places{isFull ? ' · Complet' : ''}
+                  {participantCount} / {a.maxAttending} places{isFull ? ' · Complet' : ''}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -104,13 +104,13 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
                   <Avatar key={p.user_id} letter={p.avatar_letter} color={p.color} size={28}
                     style={{ marginLeft: i === 0 ? 0 : -10, border: '2px solid #fff' }}/>
                 ))}
-                {a.attending > 5 && (
+                {participantCount > 5 && (
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%',
                     background: 'var(--line)', border: '2px solid #fff',
                     marginLeft: -10, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 9, fontWeight: 600, color: 'var(--ink-soft)',
-                  }}>+{a.attending - 5}</div>
+                  }}>+{participantCount - 5}</div>
                 )}
               </div>
             </div>
@@ -131,7 +131,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
               <div style={{
                 height: '100%', borderRadius: 999,
                 background: isFull ? 'var(--terracotta)' : a.color,
-                width: `${Math.min((a.attending / a.maxAttending) * 100, 100)}%`,
+                width: `${Math.min((participantCount / a.maxAttending) * 100, 100)}%`,
                 transition: 'width 0.3s',
               }}/>
             </div>
@@ -140,7 +140,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
           {/* CTAs */}
           {isCreator ? (
             <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: 'rgba(198,93,61,0.06)', textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)' }}>
-              C'est ta sortie · {a.attending} personne{a.attending !== 1 ? 's' : ''} participe{a.attending !== 1 ? 'nt' : ''}
+              C'est ta sortie · {participantCount} personne{participantCount !== 1 ? 's' : ''} participe{participantCount !== 1 ? 'nt' : ''}
             </div>
           ) : joined ? (
             <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
@@ -223,7 +223,8 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
 
   const handleJoin = (annonceId, currentAttending) => {
     const a = publics.find(x => x.id === annonceId)
-    if (!authUser || joinedAnnonceIds.has(annonceId) || (a && a.attending >= a.maxAttending)) return
+    const participantCount = Math.max(a?.attending ?? 0, (participantsMap[annonceId] ?? []).length)
+    if (!authUser || joinedAnnonceIds.has(annonceId) || (a && participantCount >= a.maxAttending)) return
     joinAnnonce(annonceId, currentAttending)
     // Keep selectedAnnonce in sync
     setSelectedAnnonce(prev => prev?.id === annonceId ? { ...prev, attending: prev.attending + 1 } : prev)
@@ -420,8 +421,9 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
       ) : (
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {publics.slice(0, 5).map(a => {
+            const participantCount = Math.max(a.attending, (participantsMap[a.id] ?? []).length)
             const hasJoined = joinedAnnonceIds.has(a.id)
-            const isFull = a.attending >= a.maxAttending
+            const isFull = participantCount >= a.maxAttending
             const isCreator = authUser && a.user_id === authUser.id
             const canJoin = authUser && !hasJoined && !isFull && !isCreator
 
@@ -452,11 +454,11 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                   <div style={{ fontSize: 12, color: isFull ? 'var(--terracotta)' : 'var(--ink-mute)' }}>
-                    {a.attending}/{a.maxAttending} places{isFull ? ' · Complet' : ''}
+                    {participantCount}/{a.maxAttending} places{isFull ? ' · Complet' : ''}
                   </div>
                   {!isCreator && (
                     <button
-                      onClick={e => { e.stopPropagation(); handleJoin(a.id, a.attending) }}
+                      onClick={e => { e.stopPropagation(); handleJoin(a.id, participantCount) }}
                       disabled={!canJoin}
                       style={{
                         background: hasJoined ? '#4A7C59' : isFull ? 'var(--line)' : !authUser ? 'var(--ink-mute)' : 'var(--ink)',
