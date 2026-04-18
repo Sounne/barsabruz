@@ -755,4 +755,4 @@ const MapView = ({ bars, onOpenBar }) => {
   );
 };
 
-export { HomeScreen, DiscoverScreen, MapView };
+export { HomeScreen, DiscoverScreen, MapView, SortieDetailSheet };

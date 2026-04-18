@@ -2,7 +2,7 @@ import React from 'react'
 import { Icon } from './components/ui'
 import { useData } from './context/DataContext'
 import { useAuth } from './context/AuthContext'
-import { HomeScreen, DiscoverScreen, MapView } from './screens/HomeScreen'
+import { HomeScreen, DiscoverScreen, MapView, SortieDetailSheet } from './screens/HomeScreen'
 import { BarDetailScreen } from './screens/BarDetailScreen'
 import { AgendaScreen, EventSheet } from './screens/AgendaScreen'
 import { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet, NewSortieSheet } from './screens/GroupesScreen'
@@ -32,7 +32,7 @@ const LoadingSplash = () => (
 // ─────────── MAIN APP ───────────
 const App = () => {
   const { session, loading: authLoading } = useAuth()
-  const { bars } = useData()
+  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds } = useData()
   const [tab, setTab] = React.useState('home')
   const [barId, setBarId] = React.useState(null)
   const [eventSheet, setEventSheet] = React.useState(null)
@@ -41,6 +41,7 @@ const App = () => {
   const [newAnnonce, setNewAnnonce] = React.useState(false)
   const [newSortie, setNewSortie] = React.useState(false)
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
+  const [sortieSheet, setSortieSheet] = React.useState(null)
 
   if (authLoading) return <LoadingSplash/>
 
@@ -49,18 +50,25 @@ const App = () => {
     openEvent: (e) => setEventSheet(e),
     openGroup: (g) => setGroupChat(g),
     openDM: (friend) => setDmChat(friend),
-    openAnnonce: (a) => {
-      const bar = bars.find(b => b.name === a.bar)
-      setEventSheet({
-        title: a.title,
-        date: a.when.split(' ').slice(0, -1).join(' ') || a.when,
-        time: a.when.split(' ').pop(),
-        price: 'Gratuit',
-        tag: 'Annonce',
-        attending: a.attending,
-        bar,
-      })
-    },
+    openAnnonce: (a) => setSortieSheet(a),
+  }
+
+  const handleSortieJoin = () => {
+    if (!sortieSheet) return
+    joinAnnonce(sortieSheet.id, sortieSheet.attending)
+    setSortieSheet(prev => prev ? { ...prev, attending: prev.attending + 1 } : prev)
+  }
+
+  const handleSortieUnjoin = () => {
+    if (!sortieSheet) return
+    unjoinAnnonce(sortieSheet.id)
+    setSortieSheet(prev => prev ? { ...prev, attending: Math.max(0, prev.attending - 1) } : prev)
+  }
+
+  const handleSortieDelete = () => {
+    if (!sortieSheet) return
+    deleteAnnonce(sortieSheet.id)
+    setSortieSheet(null)
   }
 
   if (groupChat) return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)} onDelete={() => { setGroupChat(null); setGroupsRefreshKey(k => k + 1) }}/>
@@ -95,6 +103,21 @@ const App = () => {
 
       {/* Event sheet */}
       {eventSheet && <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>}
+
+      {/* Sortie detail sheet (annonces from account) */}
+      {sortieSheet && (
+        <SortieDetailSheet
+          annonce={sortieSheet}
+          participants={participantsMap[sortieSheet.id] ?? []}
+          joined={joinedAnnonceIds.has(sortieSheet.id)}
+          isCreator={!!(session?.user && sortieSheet.user_id === session.user.id)}
+          authUser={session?.user ?? null}
+          onJoin={handleSortieJoin}
+          onUnjoin={handleSortieUnjoin}
+          onDelete={handleSortieDelete}
+          onClose={() => setSortieSheet(null)}
+        />
+      )}
 
       {/* New group sheet */}
       {newAnnonce && <NewAnnonceSheet onClose={() => setNewAnnonce(false)} onGroupCreated={() => setGroupsRefreshKey(k => k + 1)}/>}
