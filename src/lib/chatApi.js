@@ -70,13 +70,21 @@ export async function searchUsers(query) {
 
 // ─── GROUPS ─────────────────────────────────────────────────────────────────
 
+export async function deleteGroup(groupId) {
+  const { error } = await supabase
+    .from('group_chats')
+    .delete()
+    .eq('id', groupId)
+  if (error) throw error
+}
+
 export async function getAccessibleGroups(userId) {
   const [{ data: memberRows }, { data, error }] = await Promise.all([
     supabase.from('group_members').select('group_id').eq('user_id', userId),
     supabase
       .from('group_chats')
       .select(`
-        id, name, emoji, type, visibility, expires_at, created_at,
+        id, name, emoji, type, visibility, expires_at, created_at, created_by,
         members:group_members(count),
         last_message:group_messages(id, text, created_at)
       `)
@@ -98,6 +106,7 @@ export async function getAccessibleGroups(userId) {
     time: g.last_message[0] ? fmtTime(g.last_message[0].created_at) : '',
     unread: 0,
     isMember: memberGroupIds.has(g.id),
+    created_by: g.created_by,
   }))
 }
 

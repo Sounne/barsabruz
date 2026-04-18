@@ -55,7 +55,18 @@ export async function createAnnonce(annonce) {
     .single()
 
   if (error) throw error
-  return data
+  return { ...data, when: data.when_text, maxAttending: data.max_attending }
+}
+
+export async function joinAnnonce(annonceId, currentAttending) {
+  const { data, error } = await supabase
+    .from('annonces')
+    .update({ attending: currentAttending + 1 })
+    .eq('id', annonceId)
+    .select('attending')
+    .single()
+  if (error) throw error
+  return data.attending
 }
 
 // ─────────── EVENTS ───────────

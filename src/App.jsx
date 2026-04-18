@@ -5,7 +5,7 @@ import { useAuth } from './context/AuthContext'
 import { HomeScreen, DiscoverScreen, MapView } from './screens/HomeScreen'
 import { BarDetailScreen } from './screens/BarDetailScreen'
 import { AgendaScreen, EventSheet } from './screens/AgendaScreen'
-import { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet } from './screens/GroupesScreen'
+import { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet, NewSortieSheet } from './screens/GroupesScreen'
 import { AccountScreen } from './screens/AccountScreen'
 import { AuthScreen } from './screens/AuthScreen'
 
@@ -39,6 +39,7 @@ const App = () => {
   const [groupChat, setGroupChat] = React.useState(null)
   const [dmChat, setDmChat] = React.useState(null)
   const [newAnnonce, setNewAnnonce] = React.useState(false)
+  const [newSortie, setNewSortie] = React.useState(false)
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
 
   if (authLoading) return <LoadingSplash/>
@@ -62,7 +63,7 @@ const App = () => {
     },
   }
 
-  if (groupChat) return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)}/>
+  if (groupChat) return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)} onDelete={() => { setGroupChat(null); setGroupsRefreshKey(k => k + 1) }}/>
   if (dmChat) return <DMChatScreen friend={dmChat} onBack={() => setDmChat(null)}/>
 
   return (
@@ -94,12 +95,15 @@ const App = () => {
       {/* Event sheet */}
       {eventSheet && <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>}
 
-      {/* New annonce sheet */}
+      {/* New group sheet */}
       {newAnnonce && <NewAnnonceSheet onClose={() => setNewAnnonce(false)} onGroupCreated={() => setGroupsRefreshKey(k => k + 1)}/>}
 
-      {/* FAB for new annonce — on home & agenda */}
-      {!barId && (tab === 'home' || tab === 'agenda') && !eventSheet && !newAnnonce && (
-        <button onClick={() => setNewAnnonce(true)} style={{
+      {/* New sortie sheet */}
+      {newSortie && <NewSortieSheet onClose={() => setNewSortie(false)}/>}
+
+      {/* FAB for new sortie — on home */}
+      {!barId && tab === 'home' && !eventSheet && !newSortie && !newAnnonce && (
+        <button onClick={() => setNewSortie(true)} style={{
           position: 'absolute', bottom: 100, right: 20, zIndex: 50,
           width: 56, height: 56, borderRadius: '50%',
           background: 'var(--terracotta)', color: '#fff', border: 'none',

@@ -38,6 +38,7 @@ const Icon = ({ name, size = 20, color = 'currentColor', stroke = 1.8 }) => {
     filter: <><path d="M3 5h18l-7 9v5l-4 2v-7L3 5z"/></>,
     map: <><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></>,
     list: <><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1" fill={color} stroke="none"/><circle cx="4" cy="12" r="1" fill={color} stroke="none"/><circle cx="4" cy="18" r="1" fill={color} stroke="none"/></>,
+    trash: <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"

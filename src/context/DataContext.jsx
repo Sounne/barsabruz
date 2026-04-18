@@ -1,5 +1,5 @@
 import React from 'react'
-import { fetchBars, fetchAnnonces, fetchProfile, updateProfile } from '../services'
+import { fetchBars, fetchAnnonces, fetchProfile, updateProfile, joinAnnonce as svcJoinAnnonce } from '../services'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
 
@@ -71,12 +71,26 @@ export function DataProvider({ children }) {
     annonces: USER_DATA.annonces,
   } : USER_DATA
 
+  const joinAnnonce = React.useCallback(async (annonceId, currentAttending) => {
+    setAnnonces(prev => (prev ?? []).map(a => a.id === annonceId ? { ...a, attending: currentAttending + 1 } : a))
+    try {
+      const newCount = await svcJoinAnnonce(annonceId, currentAttending)
+      setAnnonces(prev => (prev ?? []).map(a => a.id === annonceId ? { ...a, attending: newCount } : a))
+    } catch {}
+  }, [])
+
+  const addAnnonce = React.useCallback((annonce) => {
+    setAnnonces(prev => [annonce, ...(prev ?? [])])
+  }, [])
+
   const value = {
     bars: bars ?? BARS_DATA,
     annonces: annonces ?? ANNONCES_PUBLIC,
     user: userData,
     profile,
     saveProfile,
+    joinAnnonce,
+    addAnnonce,
     loading,
   }
 

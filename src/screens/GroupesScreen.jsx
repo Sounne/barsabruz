@@ -3,6 +3,7 @@ import { Icon, Avatar } from '../components/ui'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import * as chatApi from '../lib/chatApi'
+import { createAnnonce } from '../services'
 
 // ─── Time formatter ──────────────────────────────────────────────────────────
 
@@ -154,6 +155,17 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0 }) => {
       await chatApi.sendFriendRequest(authUser.id, userId)
       setAddedIds(prev => new Set([...prev, userId]))
     } catch {}
+  }
+
+  const [removingFriend, setRemovingFriend] = React.useState(null)
+
+  const handleRemoveFriend = async () => {
+    if (!removingFriend) return
+    try {
+      await chatApi.removeFriend(removingFriend.friendshipId)
+      setFriends(prev => prev.filter(f => f.friendshipId !== removingFriend.friendshipId))
+    } catch {}
+    setRemovingFriend(null)
   }
 
   const handleRespond = async (requestId, status) => {
@@ -425,15 +437,58 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0 }) => {
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{friend.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{friend.handle}</div>
                   </div>
-                  <div style={{
-                    width: 34, height: 34, borderRadius: '50%',
-                    background: 'rgba(198,93,61,0.1)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Icon name="send" size={15} color="var(--terracotta)"/>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: '50%',
+                      background: 'rgba(198,93,61,0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Icon name="send" size={15} color="var(--terracotta)"/>
+                    </div>
+                    <div onClick={e => { e.stopPropagation(); setRemovingFriend(friend) }} style={{
+                      width: 34, height: 34, borderRadius: '50%',
+                      background: 'rgba(100,100,100,0.08)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}>
+                      <Icon name="trash" size={15} color="var(--ink-mute)"/>
+                    </div>
                   </div>
                 </div>
               ))}
+
+              {removingFriend && (
+                <div style={{
+                  position: 'fixed', inset: 0, zIndex: 200,
+                  background: 'rgba(0,0,0,0.45)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 24,
+                }} onClick={() => setRemovingFriend(null)}>
+                  <div onClick={e => e.stopPropagation()} style={{
+                    background: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340,
+                    boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
+                  }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Retirer {removingFriend.name} ?</div>
+                    <div style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 24 }}>
+                      Cette personne ne sera plus dans ta liste d'amis.
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => setRemovingFriend(null)} style={{
+                        flex: 1, padding: '12px 0', borderRadius: 12,
+                        background: 'var(--paper)', color: 'var(--ink)',
+                        border: '1px solid var(--line)', fontSize: 14, fontWeight: 600,
+                        fontFamily: 'inherit', cursor: 'pointer',
+                      }}>Annuler</button>
+                      <button onClick={handleRemoveFriend} style={{
+                        flex: 1, padding: '12px 0', borderRadius: 12,
+                        background: 'var(--terracotta)', color: '#fff',
+                        border: 'none', fontSize: 14, fontWeight: 600,
+                        fontFamily: 'inherit', cursor: 'pointer',
+                      }}>Retirer</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -470,12 +525,29 @@ const ChatInput = ({ value, onChange, onSend, sending }) => (
 
 // ═══════════════ GROUP CHAT SCREEN ═══════════════
 
-const GroupChatScreen = ({ group, onBack }) => {
+const GroupChatScreen = ({ group, onBack, onDelete }) => {
   const { user: authUser } = useAuth()
   const [messages, setMessages] = React.useState(null)
   const [input, setInput] = React.useState('')
   const [sending, setSending] = React.useState(false)
+  const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [deleting, setDeleting] = React.useState(false)
   const bottomRef = React.useRef(null)
+
+  const isCreator = authUser?.id === group.created_by
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await chatApi.deleteGroup(group.id)
+      onDelete?.()
+      onBack()
+    } catch (err) {
+      console.error(err)
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }
 
   React.useEffect(() => {
     if (!authUser) return
@@ -523,7 +595,7 @@ const GroupChatScreen = ({ group, onBack }) => {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       <div style={{ padding: '54px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, background: '#fff', borderBottom: '1px solid var(--line)' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', padding: 6, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
           <Icon name="back" size={22} color="var(--ink)"/>
@@ -539,8 +611,48 @@ const GroupChatScreen = ({ group, onBack }) => {
             <Icon name="lock" size={10}/> {visibilityLabel} · {group.members} membre{group.members !== 1 ? 's' : ''}
           </div>
         </div>
-        <Icon name="more" size={22} color="var(--ink-soft)"/>
+        {isCreator && (
+          <button onClick={() => setConfirmDelete(true)} style={{
+            background: 'none', border: 'none', padding: 6,
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+          }}>
+            <Icon name="trash" size={20} color="var(--ink-soft)"/>
+          </button>
+        )}
       </div>
+
+      {confirmDelete && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24,
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Supprimer le groupe ?</div>
+            <div style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.45, marginBottom: 24 }}>
+              Cette action est irréversible. Tous les messages seront définitivement supprimés.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDelete(false)} disabled={deleting} style={{
+                flex: 1, padding: '12px 0', borderRadius: 12,
+                background: 'var(--paper)', color: 'var(--ink)',
+                border: '1px solid var(--line)', fontSize: 14, fontWeight: 600,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}>Annuler</button>
+              <button onClick={handleDelete} disabled={deleting} style={{
+                flex: 1, padding: '12px 0', borderRadius: 12,
+                background: 'var(--terracotta)', color: '#fff',
+                border: 'none', fontSize: 14, fontWeight: 600,
+                fontFamily: 'inherit', cursor: deleting ? 'default' : 'pointer',
+              }}>{deleting ? 'Suppression…' : 'Supprimer'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ flex: 1, padding: '16px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {group.type === 'ephemeral' && (
@@ -890,4 +1002,212 @@ const NewAnnonceSheet = ({ onClose, onGroupCreated }) => {
   )
 }
 
-export { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet }
+// ═══════════════ NEW SORTIE SHEET ═══════════════
+
+const SORTIE_TYPES = [
+  { id: 'soirée', label: 'Apéro / soirée', emoji: '🍻', icon: 'cocktail' },
+  { id: 'anniv', label: 'Anniversaire', emoji: '🎂', icon: 'cake' },
+  { id: 'after', label: 'Afterwork', emoji: '💼', icon: 'beer' },
+  { id: 'match', label: 'Match', emoji: '⚽', icon: 'flame' },
+]
+
+const NewSortieSheet = ({ onClose, onCreated }) => {
+  const { bars: BARS_DATA, addAnnonce } = useData()
+  const { user: authUser } = useAuth()
+  const [type, setType] = React.useState('soirée')
+  const [bar, setBar] = React.useState(BARS_DATA[0]?.id ?? 'ostal')
+  const [title, setTitle] = React.useState('')
+  const [date, setDate] = React.useState('')
+  const [time, setTime] = React.useState('20:00')
+  const [maxAttending, setMaxAttending] = React.useState(10)
+  const [submitting, setSubmitting] = React.useState(false)
+  const [error, setError] = React.useState(null)
+
+  const canPublish = authUser && title.trim() && date && !submitting
+
+  const handlePublish = async () => {
+    if (!canPublish) return
+    setSubmitting(true)
+    setError(null)
+    const selectedBar = BARS_DATA.find(b => b.id === bar)
+    const sortieEmoji = SORTIE_TYPES.find(t => t.id === type)?.emoji ?? '🍻'
+    const dateLabel = new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+    const whenText = `${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}. ${time}`
+
+    try {
+      const row = await createAnnonce({
+        title: title.trim(),
+        bar: selectedBar?.name ?? bar,
+        when_text: whenText,
+        attending: 1,
+        max_attending: maxAttending,
+        type,
+        author: authUser.user_metadata?.name ?? authUser.email?.split('@')[0] ?? 'Moi',
+        avatar: (authUser.user_metadata?.name ?? 'M')[0].toUpperCase(),
+        color: '#C65D3D',
+      })
+      addAnnonce?.({ ...row, emoji: sortieEmoji })
+      onCreated?.()
+      onClose()
+    } catch (err) {
+      console.error(err)
+      setError(err?.message || 'Une erreur est survenue.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100,
+      background: 'rgba(0,0,0,0.4)',
+      display: 'flex', alignItems: 'flex-end',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', background: 'var(--paper)',
+        borderTopLeftRadius: 28, borderTopRightRadius: 28,
+        maxHeight: '92%', overflow: 'auto',
+        animation: 'slideUp 0.25s',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '14px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 14, color: 'var(--ink-soft)', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Nouvelle sortie</div>
+          <button onClick={handlePublish} disabled={!canPublish} style={{
+            fontSize: 14, fontWeight: 600,
+            color: canPublish ? 'var(--terracotta)' : 'var(--ink-mute)',
+            background: 'none', border: 'none',
+            cursor: canPublish ? 'pointer' : 'default',
+            fontFamily: 'inherit',
+          }}>
+            {submitting ? '…' : 'Publier'}
+          </button>
+        </div>
+
+        <div style={{ padding: 20 }}>
+          <div className="serif" style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.2 }}>Ils sortent ce soir</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-mute)', marginTop: 6 }}>Propose une sortie et invite la communauté.</div>
+
+          {!authUser && (
+            <div style={{ marginTop: 20, padding: 16, borderRadius: 12, background: 'rgba(198,93,61,0.08)', textAlign: 'center', fontSize: 14, color: 'var(--ink-soft)' }}>
+              Connecte-toi pour proposer une sortie
+            </div>
+          )}
+
+          {/* Type */}
+          <div style={{ marginTop: 22 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 8 }}>Type</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {SORTIE_TYPES.map(t => (
+                <button key={t.id} onClick={() => setType(t.id)} style={{
+                  padding: '10px 14px', borderRadius: 12,
+                  background: type === t.id ? 'var(--ink)' : '#fff',
+                  color: type === t.id ? '#fff' : 'var(--ink)',
+                  border: type === t.id ? 'none' : '1px solid var(--line)',
+                  fontSize: 13, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <Icon name={t.icon} size={15} color={type === t.id ? '#fff' : 'var(--ink-soft)'}/>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 8 }}>Titre</div>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Ex. Apéro spontané ce soir 🍻"
+              style={{ width: '100%', background: '#fff', border: 'none', padding: '14px', borderRadius: 12, fontSize: 15, fontFamily: 'inherit', outline: 'none', boxShadow: 'var(--shadow-card)', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Bar */}
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 8 }}>Bar</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {BARS_DATA.map(b => (
+                <button key={b.id} onClick={() => setBar(b.id)} style={{
+                  flex: 1, padding: 10, borderRadius: 12,
+                  background: bar === b.id ? b.color : '#fff',
+                  color: bar === b.id ? '#fff' : 'var(--ink)',
+                  border: bar === b.id ? 'none' : '1px solid var(--line)',
+                  fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                }}>
+                  <Icon name={{ ostal: 'wine', pignom: 'beer', 'arriere-cour': 'cocktail' }[b.id]} size={18} color={bar === b.id ? '#fff' : b.color}/>
+                  {b.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date & time */}
+          <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
+            <div style={{ flex: 2 }}>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 8 }}>Date</div>
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                style={{ width: '100%', background: '#fff', border: 'none', padding: '14px', borderRadius: 12, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxShadow: 'var(--shadow-card)', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 8 }}>Heure</div>
+              <input
+                type="time"
+                value={time}
+                onChange={e => setTime(e.target.value)}
+                style={{ width: '100%', background: '#fff', border: 'none', padding: '14px', borderRadius: 12, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxShadow: 'var(--shadow-card)', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          {/* Max attendees */}
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 8 }}>
+              Nombre de places ({maxAttending})
+            </div>
+            <input
+              type="range"
+              min={2} max={30} step={1}
+              value={maxAttending}
+              onChange={e => setMaxAttending(Number(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--terracotta)' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-mute)', marginTop: 4 }}>
+              <span>2</span><span>30</span>
+            </div>
+          </div>
+
+          {error && (
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: 'rgba(198,93,61,0.1)', fontSize: 13, color: 'var(--terracotta)' }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handlePublish}
+            disabled={!canPublish}
+            style={{
+              width: '100%', marginTop: 24,
+              background: canPublish ? 'var(--terracotta)' : 'var(--line)',
+              color: '#fff', border: 'none',
+              padding: 16, borderRadius: 14, fontSize: 15, fontWeight: 600,
+              fontFamily: 'inherit',
+              cursor: canPublish ? 'pointer' : 'default',
+            }}
+          >
+            {submitting ? 'Publication…' : 'Proposer la sortie'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet, NewSortieSheet }
