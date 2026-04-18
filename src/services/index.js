@@ -193,12 +193,13 @@ export async function joinEvent(eventId, userId) {
 // ─────────── AUTH ───────────
 
 export async function signUp(email, password, name) {
+  const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { name },
-      emailRedirectTo: `${window.location.origin}/barsabruz/`,
+      emailRedirectTo: redirectTo,
     },
   })
   if (error) throw error
