@@ -1,0 +1,6 @@
+{
+  "npm.enableScriptExplorer": true,
+  "npm.scriptExplorerAction": "run",
+  "livePreview.serverRoot": "/dist",
+  "livePreview.defaultPreviewPath": "/barsabruz/"
+}
