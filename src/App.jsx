@@ -39,6 +39,7 @@ const App = () => {
   const [groupChat, setGroupChat] = React.useState(null)
   const [dmChat, setDmChat] = React.useState(null)
   const [newAnnonce, setNewAnnonce] = React.useState(false)
+  const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
 
   if (authLoading) return <LoadingSplash/>
 
@@ -82,7 +83,7 @@ const App = () => {
         ) : tab === 'agenda' ? (
           <AgendaScreen onOpenEvent={navigate.openEvent}/>
         ) : tab === 'groupes' ? (
-          <GroupesScreen onOpenGroup={navigate.openGroup} onOpenDM={navigate.openDM} onNew={() => setNewAnnonce(true)}/>
+          <GroupesScreen onOpenGroup={navigate.openGroup} onOpenDM={navigate.openDM} onNew={() => setNewAnnonce(true)} refreshKey={groupsRefreshKey}/>
         ) : session ? (
           <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar}/>
         ) : (
@@ -94,7 +95,7 @@ const App = () => {
       {eventSheet && <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>}
 
       {/* New annonce sheet */}
-      {newAnnonce && <NewAnnonceSheet onClose={() => setNewAnnonce(false)}/>}
+      {newAnnonce && <NewAnnonceSheet onClose={() => setNewAnnonce(false)} onGroupCreated={() => setGroupsRefreshKey(k => k + 1)}/>}
 
       {/* FAB for new annonce — on home & agenda */}
       {!barId && (tab === 'home' || tab === 'agenda') && !eventSheet && !newAnnonce && (

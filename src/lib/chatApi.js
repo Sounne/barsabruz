@@ -70,46 +70,48 @@ export async function searchUsers(query) {
 
 // ─── GROUPS ─────────────────────────────────────────────────────────────────
 
-export async function getUserGroups(userId) {
-  const { data: memberRows, error: memberErr } = await supabase
-    .from('group_members')
-    .select('group_id')
-    .eq('user_id', userId)
-  if (memberErr) throw memberErr
-
-  const groupIds = memberRows.map(r => r.group_id)
-  if (groupIds.length === 0) return []
-
-  const { data, error } = await supabase
-    .from('group_chats')
-    .select(`
-      id, name, emoji, type, expires_at, created_at,
-      members:group_members(count),
-      last_message:group_messages(id, text, created_at)
-    `)
-    .in('id', groupIds)
-    .order('created_at', { referencedTable: 'group_messages', ascending: false })
-    .limit(1, { referencedTable: 'group_messages' })
-    .order('created_at', { ascending: false })
+export async function getAccessibleGroups(userId) {
+  const [{ data: memberRows }, { data, error }] = await Promise.all([
+    supabase.from('group_members').select('group_id').eq('user_id', userId),
+    supabase
+      .from('group_chats')
+      .select(`
+        id, name, emoji, type, visibility, expires_at, created_at,
+        members:group_members(count),
+        last_message:group_messages(id, text, created_at)
+      `)
+      .order('created_at', { referencedTable: 'group_messages', ascending: false })
+      .limit(1, { referencedTable: 'group_messages' })
+      .order('created_at', { ascending: false }),
+  ])
   if (error) throw error
-
-  return data.map(g => ({
+  const memberGroupIds = new Set((memberRows ?? []).map(r => r.group_id))
+  return (data ?? []).map(g => ({
     id: g.id,
     name: g.name,
     emoji: g.emoji,
     type: g.type,
+    visibility: g.visibility ?? 'private',
     expires_at: g.expires_at,
     members: g.members[0]?.count ?? 0,
     lastMsg: g.last_message[0]?.text ?? '',
     time: g.last_message[0] ? fmtTime(g.last_message[0].created_at) : '',
     unread: 0,
+    isMember: memberGroupIds.has(g.id),
   }))
 }
 
-export async function createGroupChat(name, emoji, type, creatorId, memberIds, expiresAt = null) {
+export async function joinGroup(groupId, userId) {
+  const { error } = await supabase
+    .from('group_members')
+    .insert({ group_id: groupId, user_id: userId })
+  if (error) throw error
+}
+
+export async function createGroupChat(name, emoji, type, creatorId, memberIds, expiresAt = null, visibility = 'private') {
   const { data: chat, error: chatErr } = await supabase
     .from('group_chats')
-    .insert({ name, emoji, type, expires_at: expiresAt, created_by: creatorId })
+    .insert({ name, emoji, type, expires_at: expiresAt, created_by: creatorId, visibility })
     .select()
     .single()
   if (chatErr) throw chatErr
