@@ -589,7 +589,7 @@ const DiscoverScreen = ({ onOpenBar }) => {
           ))}
         </div>
       ) : (
-        <Wip><MapView bars={bars} onOpenBar={onOpenBar}/></Wip>
+        <MapView bars={bars} onOpenBar={onOpenBar}/>
       )}
     </div>
   );
@@ -723,7 +723,7 @@ const MapView = ({ bars, onOpenBar }) => {
         {/* Bottom card for selected bar */}
         {sel && (
           <div
-            onClick={e => openMaps(sel, e)}
+            onClick={e => { e.stopPropagation(); onOpenBar(sel.id); }}
             style={{
               position: 'absolute', bottom: 12, left: 12, right: 12,
               background: '#fff', borderRadius: 14, padding: 12,
