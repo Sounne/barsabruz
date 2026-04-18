@@ -1,19 +1,18 @@
 import React from 'react'
-import { BARS_DATA, ANNONCES_PUBLIC } from '../data'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
+import { useData } from '../context/DataContext'
 
 // Screens: Home, Discover, Bar Detail
 
 // ═══════════════ HOME SCREEN ═══════════════
 const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) => {
+  const { bars: allBars, annonces: publics } = useData()
   const [search, setSearch] = React.useState('');
   const [joined, setJoined] = React.useState({});
-  const allBars = BARS_DATA;
   const bars = search
     ? allBars.filter(b => b.name.toLowerCase().includes(search.toLowerCase()) || b.tagline.toLowerCase().includes(search.toLowerCase()) || b.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
     : allBars;
-  const publics = ANNONCES_PUBLIC;
   const now = useCurrentTime();
   const barStatus = bar => getBarStatus(bar, now);
   const h = now.getHours();
@@ -207,10 +206,10 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
 
 // ═══════════════ DISCOVER (LIST + MAP TOGGLE) ═══════════════
 const DiscoverScreen = ({ onOpenBar }) => {
+  const { bars } = useData()
   const [view, setView] = React.useState('list');
   const now = useCurrentTime();
   const barStatus = bar => getBarStatus(bar, now);
-  const bars = BARS_DATA;
   return (
     <div style={{ paddingBottom: 100 }}>
       <div style={{ padding: '16px 20px 12px' }}>

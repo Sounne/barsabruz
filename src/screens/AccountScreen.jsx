@@ -1,6 +1,6 @@
 import React from 'react'
-import { USER_DATA, BARS_DATA } from '../data'
 import { Icon, Avatar, BarHero, shade } from '../components/ui'
+import { useData } from '../context/DataContext'
 
 // ─────────── EDIT PROFILE SHEET ───────────
 const EditProfileSheet = ({ user, onSave, onClose }) => {
@@ -159,11 +159,12 @@ const SortieRow = ({ sortie, bar, onOpen }) => (
 
 // ─────────── ACCOUNT SCREEN ───────────
 const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
-  const [user, setUser] = React.useState(USER_DATA);
+  const { user: initialUser, bars } = useData()
+  const [user, setUser] = React.useState(initialUser);
   const [editing, setEditing] = React.useState(false);
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false);
 
-  const favBars = BARS_DATA.filter(b => user.favorites.includes(b.id));
+  const favBars = bars.filter(b => user.favorites.includes(b.id));
   const displayedSorties = sortiesExpanded ? user.sorties : user.sorties.slice(0, 2);
 
   const handleSave = (updated) => {
@@ -286,7 +287,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
         </div>
         <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
           {displayedSorties.map((s, i) => {
-            const bar = BARS_DATA.find(b => b.id === s.barId);
+            const bar = bars.find(b => b.id === s.barId);
             return (
               <div key={s.id} style={{ borderBottom: i < displayedSorties.length - 1 ? '1px solid var(--line)' : 'none' }}>
                 <SortieRow sortie={s} bar={bar} onOpen={onOpenBar}/>

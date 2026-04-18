@@ -1,6 +1,6 @@
 import React from 'react'
-import { BARS_DATA } from './data'
 import { Icon } from './components/ui'
+import { useData } from './context/DataContext'
 import { HomeScreen, DiscoverScreen, MapView } from './screens/HomeScreen'
 import { BarDetailScreen } from './screens/BarDetailScreen'
 import { AgendaScreen, EventSheet } from './screens/AgendaScreen'
@@ -10,6 +10,7 @@ import { AccountScreen } from './screens/AccountScreen'
 // Main App — navigation + screens
 
 const App = () => {
+  const { bars } = useData()
   const [tab, setTab] = React.useState('home');
   const [barId, setBarId] = React.useState(null);
   const [eventSheet, setEventSheet] = React.useState(null);
@@ -21,8 +22,7 @@ const App = () => {
     openEvent: (e) => setEventSheet(e),
     openGroup: (g) => setGroupChat(g),
     openAnnonce: (a) => {
-      // Convert public annonce to event-like sheet
-      const bar = BARS_DATA.find(b => b.name === a.bar);
+      const bar = bars.find(b => b.name === a.bar);
       setEventSheet({
         title: a.title,
         date: a.when.split(' ').slice(0, -1).join(' ') || a.when,

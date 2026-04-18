@@ -1,12 +1,12 @@
 import React from 'react'
-import { BARS_DATA } from '../data'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { useData } from '../context/DataContext'
 
 // Événements (agenda), Annonces, Groupes, Compte
 
 // ═══════════════ AGENDA ═══════════════
 const AgendaScreen = ({ onOpenEvent }) => {
-  const bars = BARS_DATA;
+  const { bars } = useData();
   // Flatten and group by date
   const all = bars.flatMap(b => b.events.map(e => ({...e, bar: b})));
   const byDate = {};

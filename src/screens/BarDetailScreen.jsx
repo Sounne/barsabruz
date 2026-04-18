@@ -1,12 +1,13 @@
 import React from 'react'
-import { BARS_DATA } from '../data'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
+import { useData } from '../context/DataContext'
 
 // Bar detail screen
 
 const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
-  const bar = BARS_DATA.find(b => b.id === barId);
+  const { bars } = useData()
+  const bar = bars.find(b => b.id === barId);
   const [fav, setFav] = React.useState(false);
   const now = useCurrentTime();
   const status = getBarStatus(bar, now);

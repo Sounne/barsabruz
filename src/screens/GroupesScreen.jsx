@@ -1,12 +1,13 @@
 import React from 'react'
-import { USER_DATA, BARS_DATA } from '../data'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { useData } from '../context/DataContext'
 
 // Groupes (conversations privées) + Annonces
 
 // ═══════════════ GROUPES LIST ═══════════════
 const GroupesScreen = ({ onOpenGroup, onNew }) => {
-  const groups = USER_DATA.groups;
+  const { user } = useData()
+  const groups = user.groups;
   const [tab, setTab] = React.useState('all');
   const filtered = tab === 'all' ? groups : groups.filter(g => g.type === tab);
 
@@ -269,6 +270,7 @@ const GroupChatScreen = ({ group, onBack }) => {
 
 // ═══════════════ NEW ANNONCE SHEET ═══════════════
 const NewAnnonceSheet = ({ onClose }) => {
+  const { bars: BARS_DATA } = useData()
   const [step, setStep] = React.useState(1);
   const [type, setType] = React.useState('soirée');
   const [privacy, setPrivacy] = React.useState('public');
