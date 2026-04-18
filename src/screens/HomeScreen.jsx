@@ -6,14 +6,146 @@ import { useAuth } from '../context/AuthContext'
 
 // Screens: Home, Discover, Bar Detail
 
+// ═══════════════ SORTIE DETAIL SHEET ═══════════════
+const SortieDetailSheet = ({ annonce: a, joined, authUser, onJoin, onClose }) => {
+  const isFull = a.attending >= a.maxAttending
+  const canJoin = authUser && !joined && !isFull
+  const COLORS = ['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D', '#3A6AB0']
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'flex-end',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', background: 'var(--paper)',
+        borderTopLeftRadius: 28, borderTopRightRadius: 28,
+        maxHeight: '82%', overflow: 'auto',
+        animation: 'slideUp 0.25s',
+      }}>
+        <div style={{ height: 4, background: a.color, borderRadius: '28px 28px 0 0' }}/>
+        <div style={{ padding: '20px 20px 40px' }}>
+
+          {/* Author + close */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar letter={a.avatar} color={a.color} size={40}/>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{a.author}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>propose une sortie</div>
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(42,31,23,0.08)', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}>
+              <Icon name="close" size={16} color="var(--ink-mute)"/>
+            </button>
+          </div>
+
+          {/* Title */}
+          <div className="serif" style={{ fontSize: 22, fontWeight: 600, marginTop: 16, lineHeight: 1.25 }}>
+            {a.title}
+          </div>
+
+          {/* Info rows */}
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { icon: 'pin', label: a.bar, sub: 'Lieu' },
+              { icon: 'clock', label: a.when, sub: 'Quand' },
+            ].map(item => (
+              <div key={item.icon} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                  background: `${a.color}1a`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon name={item.icon} size={16} color={a.color}/>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{item.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 1 }}>{item.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Participants block */}
+          <div style={{ marginTop: 20, padding: 14, borderRadius: 14, background: '#fff', boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Participants</div>
+                <div style={{ fontSize: 11, color: isFull ? 'var(--terracotta)' : 'var(--ink-mute)', marginTop: 2 }}>
+                  {a.attending} / {a.maxAttending} places{isFull ? ' · Complet' : ''}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {[...Array(Math.min(a.attending, 5))].map((_, i) => (
+                  <div key={i} style={{
+                    width: 28, height: 28, borderRadius: '50%',
+                    background: COLORS[i % COLORS.length],
+                    border: '2px solid #fff', marginLeft: i === 0 ? 0 : -10,
+                  }}/>
+                ))}
+                {a.attending > 5 && (
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '50%',
+                    background: 'var(--line)', border: '2px solid #fff',
+                    marginLeft: -10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 600, color: 'var(--ink-soft)',
+                  }}>+{a.attending - 5}</div>
+                )}
+              </div>
+            </div>
+            <div style={{ height: 4, borderRadius: 999, background: 'rgba(42,31,23,0.08)' }}>
+              <div style={{
+                height: '100%', borderRadius: 999,
+                background: isFull ? 'var(--terracotta)' : a.color,
+                width: `${Math.min((a.attending / a.maxAttending) * 100, 100)}%`,
+                transition: 'width 0.3s',
+              }}/>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <button onClick={onJoin} disabled={!canJoin} style={{
+            width: '100%', marginTop: 14,
+            padding: '15px 0', borderRadius: 14,
+            background: joined ? '#4A7C59' : isFull ? 'var(--line)' : !authUser ? 'var(--ink-mute)' : 'var(--terracotta)',
+            color: '#fff', border: 'none',
+            fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
+            cursor: canJoin ? 'pointer' : 'default',
+            transition: 'background 0.15s',
+          }}>
+            {joined ? '✓ Tu participes à cette sortie' : isFull ? 'Complet' : !authUser ? 'Connecte-toi pour rejoindre' : 'Je viens !'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ═══════════════ HOME SCREEN ═══════════════
-const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) => {
+const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab }) => {
   const { bars: allBars, annonces: publics, joinAnnonce } = useData()
   const { user: authUser } = useAuth()
   const [search, setSearch] = React.useState('')
   const [joined, setJoined] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('joinedAnnonces') || '{}') } catch { return {} }
   })
+  const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
+
+  const handleJoin = (annonceId, currentAttending) => {
+    const isFull = (publics.find(a => a.id === annonceId)?.attending ?? currentAttending) >= (publics.find(a => a.id === annonceId)?.maxAttending ?? 0)
+    if (!authUser || joined[annonceId] || isFull) return
+    const next = { ...joined, [annonceId]: true }
+    setJoined(next)
+    try { localStorage.setItem('joinedAnnonces', JSON.stringify(next)) } catch {}
+    joinAnnonce(annonceId, currentAttending)
+  }
   const bars = search
     ? allBars.filter(b => b.name.toLowerCase().includes(search.toLowerCase()) || b.tagline.toLowerCase().includes(search.toLowerCase()) || b.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
     : allBars;
@@ -159,11 +291,24 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
       {/* Annonces publiques */}
       {publics.length > 0 && (
         <>
-          <div style={{ padding: '22px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div style={{ padding: '22px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 className="serif" style={{ fontSize: 20, margin: 0, fontWeight: 600 }}>Ils sortent ce soir</h2>
               <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>Rejoignez une soirée en un clic</div>
             </div>
+            {authUser && onNewSortie && (
+              <button onClick={onNewSortie} style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 13px', borderRadius: 999,
+                background: 'var(--terracotta)', color: '#fff',
+                border: 'none', fontSize: 12, fontWeight: 600,
+                fontFamily: 'inherit', cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(198,93,61,0.3)',
+              }}>
+                <Icon name="plus" size={13} color="#fff"/>
+                Proposer
+              </button>
+            )}
           </div>
           <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {publics.slice(0, 5).map(a => {
@@ -171,19 +316,12 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
               const isFull = a.attending >= a.maxAttending
               const canJoin = authUser && !hasJoined && !isFull
 
-              const handleJoin = () => {
-                if (!canJoin) return
-                const next = { ...joined, [a.id]: true }
-                setJoined(next)
-                try { localStorage.setItem('joinedAnnonces', JSON.stringify(next)) } catch {}
-                joinAnnonce(a.id, a.attending)
-              }
-
               return (
-                <div key={a.id} style={{
+                <div key={a.id} onClick={() => setSelectedAnnonce(a)} style={{
                   background: '#fff', borderRadius: 16, padding: 14,
                   boxShadow: 'var(--shadow-card)',
                   borderLeft: `3px solid ${a.color}`,
+                  cursor: 'pointer',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Avatar letter={a.avatar} color={a.color} size={32}/>
@@ -212,10 +350,10 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
                       {a.attending}/{a.maxAttending} places{isFull ? ' · Complet' : ''}
                     </div>
                     <button
-                      onClick={handleJoin}
+                      onClick={e => { e.stopPropagation(); handleJoin(a.id, a.attending) }}
                       disabled={!canJoin}
                       style={{
-                        background: hasJoined ? 'var(--success, #4A7C59)' : isFull ? 'var(--line)' : !authUser ? 'var(--ink-mute)' : 'var(--ink)',
+                        background: hasJoined ? '#4A7C59' : isFull ? 'var(--line)' : !authUser ? 'var(--ink-mute)' : 'var(--ink)',
                         color: '#fff',
                         padding: '6px 14px', borderRadius: 999,
                         fontSize: 12, fontWeight: 600,
@@ -232,6 +370,20 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
             })}
           </div>
         </>
+      )}
+
+      {/* Sortie detail sheet */}
+      {selectedAnnonce && (
+        <SortieDetailSheet
+          annonce={selectedAnnonce}
+          joined={!!joined[selectedAnnonce.id]}
+          authUser={authUser}
+          onJoin={() => {
+            handleJoin(selectedAnnonce.id, selectedAnnonce.attending)
+            setSelectedAnnonce(a => a ? { ...a, attending: joined[a.id] ? a.attending : a.attending + 1 } : null)
+          }}
+          onClose={() => setSelectedAnnonce(null)}
+        />
       )}
     </div>
   );

@@ -77,6 +77,7 @@ const App = () => {
             onOpenBar: navigate.openBar,
             onOpenEvent: navigate.openEvent,
             onOpenAnnonce: navigate.openAnnonce,
+            onNewSortie: () => setNewSortie(true),
             onNavigateTab: setTab,
           }}/>
         ) : tab === 'discover' ? (
@@ -99,7 +100,7 @@ const App = () => {
       {newAnnonce && <NewAnnonceSheet onClose={() => setNewAnnonce(false)} onGroupCreated={() => setGroupsRefreshKey(k => k + 1)}/>}
 
       {/* New sortie sheet */}
-      {newSortie && <NewSortieSheet onClose={() => setNewSortie(false)}/>}
+      {newSortie && <NewSortieSheet onClose={() => setNewSortie(false)} onCreated={() => setNewSortie(false)}/>}
 
       {/* FAB for new sortie — on home */}
       {!barId && tab === 'home' && !eventSheet && !newSortie && !newAnnonce && (
