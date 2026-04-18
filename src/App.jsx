@@ -29,11 +29,14 @@ const LoadingSplash = () => (
   </div>
 )
 
+const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
+
 // ─────────── MAIN APP ───────────
 const App = () => {
   const { session, loading: authLoading } = useAuth()
   const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds } = useData()
   const [tab, setTab] = React.useState('home')
+  const [slideDir, setSlideDir] = React.useState(null)
   const [barId, setBarId] = React.useState(null)
   const [eventSheet, setEventSheet] = React.useState(null)
   const [groupChat, setGroupChat] = React.useState(null)
@@ -42,6 +45,14 @@ const App = () => {
   const [newSortie, setNewSortie] = React.useState(false)
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
   const [sortieSheet, setSortieSheet] = React.useState(null)
+
+  const handleTabChange = (newTab) => {
+    if (newTab === tab) return
+    const oldIdx = TABS.indexOf(tab)
+    const newIdx = TABS.indexOf(newTab)
+    setSlideDir(newIdx > oldIdx ? 'right' : 'left')
+    setTab(newTab)
+  }
 
   if (authLoading) return <LoadingSplash/>
 
@@ -77,7 +88,11 @@ const App = () => {
   return (
     <>
       {/* Screen */}
-      <div style={{ height: '100%', overflow: 'auto', paddingTop: 46 }} className="noscroll">
+      <div
+        key={tab}
+        className={`noscroll${slideDir ? ` tab-slide-${slideDir}` : ''}`}
+        style={{ height: '100%', overflow: 'auto', paddingTop: 46 }}
+      >
         {barId ? (
           <BarDetailScreen barId={barId} onBack={() => setBarId(null)} onOpenEvent={navigate.openEvent} onNewAnnonce={() => setNewAnnonce(true)}/>
         ) : tab === 'home' ? (
@@ -86,7 +101,7 @@ const App = () => {
             onOpenEvent: navigate.openEvent,
             onOpenAnnonce: navigate.openAnnonce,
             onNewSortie: () => setNewSortie(true),
-            onNavigateTab: setTab,
+            onNavigateTab: handleTabChange,
           }}/>
         ) : tab === 'discover' ? (
           <DiscoverScreen onOpenBar={navigate.openBar}/>
@@ -147,29 +162,42 @@ const App = () => {
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderTop: '1px solid var(--line)',
-          padding: '8px 8px 28px',
-          display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4,
         }}>
-          {[
-            { id: 'home', label: 'Accueil', icon: 'home' },
-            { id: 'discover', label: 'Bars', icon: 'pin' },
-            { id: 'agenda', label: 'Agenda', icon: 'calendar' },
-            { id: 'groupes', label: 'Social', icon: 'users' },
-            { id: 'account', label: 'Compte', icon: 'user' },
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{
-                background: 'none', border: 'none', padding: '8px 0 4px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}>
-              <Icon name={t.icon} size={22} color={tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)'} stroke={tab === t.id ? 2.2 : 1.7}/>
-              <span style={{
-                fontSize: 10, fontWeight: tab === t.id ? 600 : 500,
-                color: tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)',
-              }}>{t.label}</span>
-            </button>
-          ))}
+          {/* Sliding top indicator */}
+          <div style={{
+            position: 'absolute', top: 0,
+            left: `${TABS.indexOf(tab) * 20}%`,
+            width: '20%', height: 2.5,
+            background: 'var(--terracotta)',
+            borderRadius: '0 0 3px 3px',
+            transition: 'left 0.26s cubic-bezier(0.4,0,0.2,1)',
+            pointerEvents: 'none',
+          }}/>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: '8px 8px 28px' }}>
+            {[
+              { id: 'home', label: 'Accueil', icon: 'home' },
+              { id: 'discover', label: 'Bars', icon: 'pin' },
+              { id: 'agenda', label: 'Agenda', icon: 'calendar' },
+              { id: 'groupes', label: 'Social', icon: 'users' },
+              { id: 'account', label: 'Compte', icon: 'user' },
+            ].map(t => (
+              <button key={t.id} onClick={() => handleTabChange(t.id)}
+                style={{
+                  background: 'none', border: 'none', padding: '8px 0 4px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  transform: tab === t.id ? 'scale(1.08)' : 'scale(1)',
+                  transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
+                }}>
+                <Icon name={t.icon} size={22} color={tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)'} stroke={tab === t.id ? 2.2 : 1.7}/>
+                <span style={{
+                  fontSize: 10, fontWeight: tab === t.id ? 600 : 500,
+                  color: tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)',
+                  transition: 'color 0.2s, font-weight 0.2s',
+                }}>{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </>
