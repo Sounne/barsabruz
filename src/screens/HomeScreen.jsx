@@ -297,20 +297,29 @@ const DiscoverScreen = ({ onOpenBar }) => {
 };
 
 // ═══════════════ MAP VIEW ═══════════════
+const BAR_ICONS = { ostal: 'wine', pignom: 'beer', 'arriere-cour': 'cocktail' };
+const PIN_POSITIONS = [{ x: 145, y: 210 }, { x: 230, y: 160 }, { x: 280, y: 260 }];
+
 const MapView = ({ bars, onOpenBar }) => {
-  const [selected, setSelected] = React.useState(bars[0].id);
-  const sel = bars.find(b => b.id === selected);
+  const [selected, setSelected] = React.useState(null);
   const now = useCurrentTime();
   const barStatus = bar => getBarStatus(bar, now);
-  // Fake map with a stylized grid
+  const sel = bars.find(b => b.id === selected);
+
+  const openMaps = (bar, e) => {
+    e.stopPropagation();
+    window.open(bar.mapsUrl, '_blank', 'noopener');
+  };
+
   return (
-    <div style={{ padding: '0 20px' }}>
+    <div style={{ padding: '0 20px' }} onClick={() => setSelected(null)}>
       <div style={{
         position: 'relative', borderRadius: 18, overflow: 'hidden',
-        height: 420, background: '#E8DFCE',
+        height: sel ? 460 : 420, background: '#E8DFCE',
         boxShadow: 'var(--shadow-card)',
+        transition: 'height 0.25s ease',
       }}>
-        {/* stylized map */}
+        {/* Stylized map */}
         <svg viewBox="0 0 400 420" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
           <defs>
             <pattern id="mapgrid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -319,79 +328,137 @@ const MapView = ({ bars, onOpenBar }) => {
           </defs>
           <rect width="400" height="420" fill="#F0E6D2"/>
           <rect width="400" height="420" fill="url(#mapgrid)"/>
-          {/* Rivers / roads */}
           <path d="M0,180 Q100,160 200,200 T400,220" stroke="#D9CDB5" strokeWidth="22" fill="none"/>
           <path d="M0,180 Q100,160 200,200 T400,220" stroke="#F5ECD8" strokeWidth="18" fill="none"/>
           <path d="M180,0 Q200,200 160,420" stroke="#D9CDB5" strokeWidth="16" fill="none"/>
           <path d="M180,0 Q200,200 160,420" stroke="#F5ECD8" strokeWidth="12" fill="none"/>
           <path d="M0,340 L400,320" stroke="#D9CDB5" strokeWidth="12" fill="none"/>
           <path d="M0,340 L400,320" stroke="#F5ECD8" strokeWidth="9" fill="none"/>
-          {/* park */}
           <ellipse cx="90" cy="100" rx="60" ry="45" fill="#CDD9B5" opacity="0.7"/>
           <ellipse cx="320" cy="370" rx="70" ry="40" fill="#CDD9B5" opacity="0.7"/>
-          {/* buildings */}
           {[[50,250,30,20],[100,270,40,30],[250,80,30,25],[280,150,40,35],[60,380,50,30]].map(([x,y,w,h],i) =>
             <rect key={i} x={x} y={y} width={w} height={h} fill="#E5D8BC" opacity="0.8" rx="2"/>)}
         </svg>
+
         {/* Pins */}
         {bars.map((bar, i) => {
-          const positions = [
-            { x: 145, y: 210 }, { x: 230, y: 160 }, { x: 280, y: 260 }
-          ];
-          const p = positions[i];
+          const p = PIN_POSITIONS[i];
           const isSel = selected === bar.id;
+          const status = barStatus(bar);
           return (
-            <div key={bar.id} onClick={() => setSelected(bar.id)}
+            <div key={bar.id}
+              onClick={e => { e.stopPropagation(); setSelected(isSel ? null : bar.id); }}
               style={{
-                position: 'absolute', left: `${(p.x / 400) * 100}%`, top: `${(p.y / 420) * 100}%`,
-                transform: `translate(-50%, -100%) scale(${isSel ? 1.15 : 1})`,
-                transition: 'transform 0.2s', cursor: 'pointer',
-                zIndex: isSel ? 10 : 1,
+                position: 'absolute',
+                left: `${(p.x / 400) * 100}%`,
+                top: `${(p.y / 420) * 100}%`,
+                transform: `translate(-50%, -100%) scale(${isSel ? 1.12 : 1})`,
+                transition: 'transform 0.2s',
+                cursor: 'pointer',
+                zIndex: isSel ? 20 : 5,
               }}>
+              {/* Info bubble — shown when selected */}
+              {isSel && (
+                <div onClick={e => openMaps(bar, e)} style={{
+                  position: 'absolute', bottom: 'calc(100% + 6px)',
+                  left: '50%', transform: 'translateX(-50%)',
+                  background: '#fff', borderRadius: 12, padding: '10px 12px',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                  whiteSpace: 'nowrap', minWidth: 180,
+                  cursor: 'pointer',
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 3 }}>
+                    {bar.name}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--ink-mute)', marginBottom: 7 }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                      background: status.openNow ? 'var(--success)' : 'var(--ink-mute)',
+                    }}/>
+                    {status.openNow ? `Ouvert · ferme à ${status.closesAt}` : `Fermé · ${status.opensIn}`}
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    background: bar.color, color: '#fff',
+                    borderRadius: 8, padding: '5px 10px',
+                    fontSize: 11, fontWeight: 600,
+                  }}>
+                    <Icon name="pin" size={11} color="#fff"/>
+                    Ouvrir dans Maps
+                  </div>
+                  {/* Pointer */}
+                  <div style={{
+                    position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+                    width: 0, height: 0,
+                    borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+                    borderTop: '6px solid #fff',
+                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.08))',
+                  }}/>
+                </div>
+              )}
+
+              {/* Pin */}
               <div style={{
                 background: bar.color, color: '#fff',
-                padding: '8px 12px', borderRadius: 999,
+                padding: '7px 11px', borderRadius: 999,
                 fontSize: 13, fontWeight: 600,
-                boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+                boxShadow: isSel ? `0 4px 16px ${bar.color}66` : '0 3px 10px rgba(0,0,0,0.18)',
                 whiteSpace: 'nowrap',
                 display: 'flex', alignItems: 'center', gap: 6,
+                border: isSel ? '2px solid #fff' : '2px solid transparent',
+                transition: 'box-shadow 0.2s, border 0.2s',
               }}>
-                <Icon name={{ostal:'wine',pignom:'beer','arriere-cour':'cocktail'}[bar.id]} size={14} color="#fff"/>
+                <Icon name={BAR_ICONS[bar.id]} size={13} color="#fff"/>
                 {bar.name}
               </div>
               <div style={{
                 width: 0, height: 0,
-                borderLeft: '6px solid transparent',
-                borderRight: '6px solid transparent',
-                borderTop: `8px solid ${bar.color}`,
+                borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+                borderTop: `7px solid ${bar.color}`,
                 margin: '0 auto',
               }}/>
             </div>
           );
         })}
-        {/* Bottom card for selected */}
-        <div style={{
-          position: 'absolute', bottom: 12, left: 12, right: 12,
-          background: '#fff', borderRadius: 14, padding: 12,
-          display: 'flex', gap: 12, alignItems: 'center',
-          boxShadow: 'var(--shadow-float)',
-        }} onClick={() => onOpenBar(sel.id)}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 10, flexShrink: 0,
-            background: `linear-gradient(135deg, ${sel.color}, ${sel.accent})`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon name={{ostal:'wine',pignom:'beer','arriere-cour':'cocktail'}[sel.id]} size={22} color="#fff"/>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="serif" style={{ fontSize: 16, fontWeight: 600 }}>{sel.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--ink-mute)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <OpenDot open={barStatus(sel).openNow}/>
-              {barStatus(sel).openNow ? 'Ouvert' : 'Fermé'} · {sel.distance}
+
+        {/* Bottom card for selected bar */}
+        {sel && (
+          <div
+            onClick={e => openMaps(sel, e)}
+            style={{
+              position: 'absolute', bottom: 12, left: 12, right: 12,
+              background: '#fff', borderRadius: 14, padding: 12,
+              display: 'flex', gap: 12, alignItems: 'center',
+              boxShadow: 'var(--shadow-float)', cursor: 'pointer',
+              animation: 'fadeUp 0.2s ease',
+            }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+              background: `linear-gradient(135deg, ${sel.color}, ${sel.accent})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name={BAR_ICONS[sel.id]} size={20} color="#fff"/>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="serif" style={{ fontSize: 15, fontWeight: 600 }}>{sel.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {sel.address}
+              </div>
+            </div>
+            <div style={{
+              background: sel.color, color: '#fff',
+              padding: '6px 10px', borderRadius: 8,
+              fontSize: 11, fontWeight: 600, flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              <Icon name="pin" size={11} color="#fff"/>
+              Maps
             </div>
           </div>
-          <Icon name="chevron" size={16} color="var(--ink-mute)"/>
-        </div>
+        )}
+      </div>
+      <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11, color: 'var(--ink-mute)' }}>
+        Appuyez sur un marqueur pour ouvrir dans Maps
       </div>
     </div>
   );
