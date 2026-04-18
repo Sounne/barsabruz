@@ -5,7 +5,7 @@ import { useAuth } from './context/AuthContext'
 import { HomeScreen, DiscoverScreen, MapView } from './screens/HomeScreen'
 import { BarDetailScreen } from './screens/BarDetailScreen'
 import { AgendaScreen, EventSheet } from './screens/AgendaScreen'
-import { GroupesScreen, GroupChatScreen, NewAnnonceSheet } from './screens/GroupesScreen'
+import { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet } from './screens/GroupesScreen'
 import { AccountScreen } from './screens/AccountScreen'
 import { AuthScreen } from './screens/AuthScreen'
 
@@ -37,6 +37,7 @@ const App = () => {
   const [barId, setBarId] = React.useState(null)
   const [eventSheet, setEventSheet] = React.useState(null)
   const [groupChat, setGroupChat] = React.useState(null)
+  const [dmChat, setDmChat] = React.useState(null)
   const [newAnnonce, setNewAnnonce] = React.useState(false)
 
   if (authLoading) return <LoadingSplash/>
@@ -45,6 +46,7 @@ const App = () => {
     openBar: (id) => setBarId(id),
     openEvent: (e) => setEventSheet(e),
     openGroup: (g) => setGroupChat(g),
+    openDM: (friend) => setDmChat(friend),
     openAnnonce: (a) => {
       const bar = bars.find(b => b.name === a.bar)
       setEventSheet({
@@ -59,9 +61,8 @@ const App = () => {
     },
   }
 
-  if (groupChat) {
-    return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)}/>
-  }
+  if (groupChat) return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)}/>
+  if (dmChat) return <DMChatScreen friend={dmChat} onBack={() => setDmChat(null)}/>
 
   return (
     <>
@@ -81,7 +82,7 @@ const App = () => {
         ) : tab === 'agenda' ? (
           <AgendaScreen onOpenEvent={navigate.openEvent}/>
         ) : tab === 'groupes' ? (
-          <GroupesScreen onOpenGroup={navigate.openGroup} onNew={() => setNewAnnonce(true)}/>
+          <GroupesScreen onOpenGroup={navigate.openGroup} onOpenDM={navigate.openDM} onNew={() => setNewAnnonce(true)}/>
         ) : session ? (
           <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar}/>
         ) : (
@@ -124,7 +125,7 @@ const App = () => {
             { id: 'home', label: 'Accueil', icon: 'home' },
             { id: 'discover', label: 'Bars', icon: 'pin' },
             { id: 'agenda', label: 'Agenda', icon: 'calendar' },
-            { id: 'groupes', label: 'Groupes 🚧', icon: 'users' },
+            { id: 'groupes', label: 'Social', icon: 'users' },
             { id: 'account', label: 'Compte', icon: 'user' },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
