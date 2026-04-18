@@ -8,11 +8,12 @@ alter table public.group_chats
 -- Replace old restrictive policy
 drop policy if exists "See groups you belong to" on public.group_chats;
 
--- New policy: member OR friend-accessible OR public
+-- New policy: creator, member, friend-accessible, or public
 create policy "See accessible groups"
   on public.group_chats for select
   using (
-    exists (
+    auth.uid() = created_by
+    or exists (
       select 1 from public.group_members
       where group_id = id and user_id = auth.uid()
     )

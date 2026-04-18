@@ -736,7 +736,7 @@ const NewAnnonceSheet = ({ onClose, onGroupCreated }) => {
       onClose()
     } catch (err) {
       console.error(err)
-      setError('Une erreur est survenue. Réessaie.')
+      setError(err?.message || 'Une erreur est survenue. Réessaie.')
     } finally {
       setSubmitting(false)
     }

@@ -109,18 +109,28 @@ export async function joinGroup(groupId, userId) {
 }
 
 export async function createGroupChat(name, emoji, type, creatorId, memberIds, expiresAt = null, visibility = 'private') {
-  const { data: chat, error: chatErr } = await supabase
+  // Generate ID client-side so we can insert members before querying the group
+  const groupId = crypto.randomUUID()
+
+  const { error: chatErr } = await supabase
     .from('group_chats')
-    .insert({ name, emoji, type, expires_at: expiresAt, created_by: creatorId, visibility })
-    .select()
-    .single()
+    .insert({ id: groupId, name, emoji, type, expires_at: expiresAt, created_by: creatorId, visibility })
   if (chatErr) throw chatErr
 
+  // Insert members (creator first, then others)
   const allIds = [...new Set([creatorId, ...memberIds])]
   const { error: membErr } = await supabase
     .from('group_members')
-    .insert(allIds.map(uid => ({ group_id: chat.id, user_id: uid })))
+    .insert(allIds.map(uid => ({ group_id: groupId, user_id: uid })))
   if (membErr) throw membErr
+
+  // Now SELECT works: user is a member
+  const { data: chat, error: selectErr } = await supabase
+    .from('group_chats')
+    .select('id, name, emoji, type, visibility, expires_at, created_at')
+    .eq('id', groupId)
+    .single()
+  if (selectErr) throw selectErr
 
   return chat
 }
