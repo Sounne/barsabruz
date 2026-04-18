@@ -8,7 +8,7 @@ import {
   fetchAllAnnonceParticipants,
 } from '../services'
 import { getAccessibleGroups, getFriends } from '../lib/chatApi'
-import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
+import { BARS_DATA, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
 
 const DataContext = React.createContext(null)
@@ -45,7 +45,7 @@ export function DataProvider({ children }) {
           fetchAnnonces(),
         ])
         if (!cancelled) {
-          const resolvedAnnonces = annoncesData?.length ? annoncesData : ANNONCES_PUBLIC
+          const resolvedAnnonces = annoncesData?.length ? annoncesData : []
           setBars(barsData?.length ? barsData : BARS_DATA)
           setAnnonces(resolvedAnnonces)
           if (annoncesData?.length) loadParticipants(annoncesData)
@@ -54,7 +54,7 @@ export function DataProvider({ children }) {
         console.warn('Supabase non disponible, données locales utilisées:', err.message)
         if (!cancelled) {
           setBars(BARS_DATA)
-          setAnnonces(ANNONCES_PUBLIC)
+          setAnnonces([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -201,7 +201,7 @@ export function DataProvider({ children }) {
 
   const value = {
     bars: bars ?? BARS_DATA,
-    annonces: annonces ?? ANNONCES_PUBLIC,
+    annonces: annonces ?? [],
     participantsMap,
     user: userData,
     profile,
