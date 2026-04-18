@@ -40,7 +40,6 @@ const App = () => {
   const [newAnnonce, setNewAnnonce] = React.useState(false)
 
   if (authLoading) return <LoadingSplash/>
-  if (!session) return <AuthScreen/>
 
   const navigate = {
     openBar: (id) => setBarId(id),
@@ -83,8 +82,10 @@ const App = () => {
           <AgendaScreen onOpenEvent={navigate.openEvent}/>
         ) : tab === 'groupes' ? (
           <GroupesScreen onOpenGroup={navigate.openGroup} onNew={() => setNewAnnonce(true)}/>
-        ) : (
+        ) : session ? (
           <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar}/>
+        ) : (
+          <AuthScreen/>
         )}
       </div>
 
@@ -123,7 +124,7 @@ const App = () => {
             { id: 'home', label: 'Accueil', icon: 'home' },
             { id: 'discover', label: 'Bars', icon: 'pin' },
             { id: 'agenda', label: 'Agenda', icon: 'calendar' },
-            { id: 'groupes', label: 'Groupes', icon: 'users' },
+            { id: 'groupes', label: 'Groupes 🚧', icon: 'users' },
             { id: 'account', label: 'Compte', icon: 'user' },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}

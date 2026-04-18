@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip } from '../components/ui'
 import { useData } from '../context/DataContext'
 
 // Groupes (conversations privées) + Annonces
@@ -12,6 +12,7 @@ const GroupesScreen = ({ onOpenGroup, onNew }) => {
   const filtered = tab === 'all' ? groups : groups.filter(g => g.type === tab);
 
   return (
+    <Wip>
     <div style={{ paddingBottom: 100 }}>
       <div style={{ padding: '16px 20px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -118,6 +119,7 @@ const GroupesScreen = ({ onOpenGroup, onNew }) => {
         </div>
       </div>
     </div>
+    </Wip>
   );
 };
 
@@ -392,13 +394,15 @@ const NewAnnonceSheet = ({ onClose }) => {
             </div>
           </div>
 
-          <button style={{
-            width: '100%', marginTop: 24,
-            background: 'var(--terracotta)', color: '#fff', border: 'none',
-            padding: 16, borderRadius: 14,
-            fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
-            cursor: 'pointer',
-          }}>Publier l'annonce</button>
+          <Wip>
+            <button style={{
+              width: '100%', marginTop: 24,
+              background: 'var(--terracotta)', color: '#fff', border: 'none',
+              padding: 16, borderRadius: 14,
+              fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
+              cursor: 'pointer',
+            }}>Publier l'annonce</button>
+          </Wip>
         </div>
       </div>
     </div>

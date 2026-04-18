@@ -178,4 +178,27 @@ const OpenDot = ({ open }) => (
   </span>
 );
 
-export { Icon, Avatar, BarHero, Tag, OpenDot, shade };
+// ─────────── WIP OVERLAY ───────────
+const Wip = ({ children }) => (
+  <div style={{ position: 'relative' }}>
+    <div style={{ filter: 'grayscale(0.9)', opacity: 0.38, pointerEvents: 'none', userSelect: 'none' }}>
+      {children}
+    </div>
+    <div style={{
+      position: 'absolute', inset: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      pointerEvents: 'none', overflow: 'hidden',
+    }}>
+      <span style={{
+        transform: 'rotate(-18deg)',
+        fontSize: 12, fontWeight: 800, letterSpacing: '0.12em',
+        color: 'rgba(42,31,23,0.5)', textTransform: 'uppercase',
+        whiteSpace: 'nowrap', userSelect: 'none', fontFamily: 'inherit',
+      }}>
+        🚧 En travaux
+      </span>
+    </div>
+  </div>
+);
+
+export { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip };

@@ -95,9 +95,16 @@ const AuthScreen = () => {
         <h1 className="serif" style={{ fontSize: 26, fontWeight: 600, margin: '0 0 12px' }}>
           Vérifie tes emails
         </h1>
-        <p style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.6, margin: '0 0 32px', maxWidth: 300 }}>
-          Un lien de confirmation a été envoyé à <strong>{email}</strong>. Clique dessus pour activer ton compte.
+        <p style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.6, margin: '0 0 16px', maxWidth: 300 }}>
+          Un lien de confirmation t'a été envoyé par <strong>Bars à Bruz</strong> à l'adresse <strong>{email}</strong>. Clique dessus pour activer ton compte.
         </p>
+        <div style={{
+          background: 'rgba(198,93,61,0.08)', border: '1px solid rgba(198,93,61,0.2)',
+          borderRadius: 10, padding: '10px 14px', marginBottom: 32, maxWidth: 300,
+          fontSize: 13, color: 'var(--terracotta)', fontWeight: 500, lineHeight: 1.5,
+        }}>
+          Si tu ne vois pas l'email, pense à vérifier tes <strong>spams</strong>.
+        </div>
         <button onClick={() => setMode('login')} style={{
           background: 'none', border: 'none', color: 'var(--terracotta)',
           fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',

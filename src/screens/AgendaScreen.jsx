@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip } from '../components/ui'
 import { useData } from '../context/DataContext'
 
 // Événements (agenda), Annonces, Groupes, Compte
@@ -160,40 +160,42 @@ const EventSheet = ({ event, onClose }) => {
             </div>
           </div>
 
-          <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ display: 'flex' }}>
-              {['#C65D3D','#6B3A4A','#D9A44A','#6D7A3D','#7FA7B8'].map((c, i) => (
-                <div key={i} style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: c, border: '2px solid var(--paper)',
-                  marginLeft: i === 0 ? 0 : -10,
-                }}/>
-              ))}
+          <Wip>
+            <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex' }}>
+                {['#C65D3D','#6B3A4A','#D9A44A','#6D7A3D','#7FA7B8'].map((c, i) => (
+                  <div key={i} style={{
+                    width: 28, height: 28, borderRadius: '50%',
+                    background: c, border: '2px solid var(--paper)',
+                    marginLeft: i === 0 ? 0 : -10,
+                  }}/>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+                Sarah, Clément, +{event.attending - 2} autres
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-              Sarah, Clément, +{event.attending - 2} autres
-            </div>
-          </div>
 
-          <button onClick={() => setAttending(!attending)} style={{
-            width: '100%', marginTop: 22,
-            background: attending ? 'var(--success)' : event.bar.color,
-            color: '#fff', border: 'none',
-            padding: 16, borderRadius: 14,
-            fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}>
-            {attending ? <><Icon name="check" size={18} color="#fff"/> Tu y es !</> : 'Je participe'}
-          </button>
-          <button style={{
-            width: '100%', marginTop: 10,
-            background: 'transparent', color: 'var(--ink-soft)',
-            border: '1px solid var(--line)',
-            padding: 14, borderRadius: 14,
-            fontSize: 14, fontWeight: 600, fontFamily: 'inherit',
-            cursor: 'pointer',
-          }}>Partager à un groupe</button>
+            <button style={{
+              width: '100%', marginTop: 22,
+              background: event.bar.color,
+              color: '#fff', border: 'none',
+              padding: 16, borderRadius: 14,
+              fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              Je participe
+            </button>
+            <button style={{
+              width: '100%', marginTop: 10,
+              background: 'transparent', color: 'var(--ink-soft)',
+              border: '1px solid var(--line)',
+              padding: 14, borderRadius: 14,
+              fontSize: 14, fontWeight: 600, fontFamily: 'inherit',
+              cursor: 'pointer',
+            }}>Partager à un groupe</button>
+          </Wip>
         </div>
       </div>
     </div>

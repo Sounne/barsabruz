@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar, BarHero, shade } from '../components/ui'
+import { Icon, Avatar, BarHero, shade, Wip } from '../components/ui'
 import { useData } from '../context/DataContext'
 import { signOut } from '../services'
 
@@ -268,20 +268,24 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
 
         <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
           {[
-            { n: user.sorties.length, l: 'Sorties' },
-            { n: user.groups.length, l: 'Groupes' },
-            { n: 28, l: 'Amis' },
-          ].map(s => (
-            <div key={s.l}>
-              <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>{s.n}</div>
-              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.l}</div>
-            </div>
-          ))}
+            { n: user.sorties.length, l: 'Sorties', mock: false },
+            { n: user.groups.length, l: 'Groupes', mock: false },
+            { n: 28, l: 'Amis', mock: true },
+          ].map(s => {
+            const node = (
+              <div>
+                <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>{s.n}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.l}</div>
+              </div>
+            )
+            return s.mock ? <Wip key={s.l}>{node}</Wip> : <div key={s.l}>{node}</div>
+          })}
         </div>
       </div>
 
       {/* Bars favoris */}
       {favBars.length > 0 && (
+        <Wip>
         <div style={{ padding: '22px 0 10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 20px', marginBottom: 12 }}>
             <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Bars favoris</h2>
@@ -301,9 +305,11 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
             </div>
           </div>
         </div>
+        </Wip>
       )}
 
       {/* Mes annonces */}
+      <Wip>
       <div style={{ padding: '14px 20px 10px' }}>
         <h2 className="serif" style={{ fontSize: 18, margin: '0 0 10px', fontWeight: 600 }}>Mes annonces</h2>
         {user.annonces.map(a => (
@@ -328,8 +334,10 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
           </div>
         ))}
       </div>
+      </Wip>
 
       {/* Mes sorties */}
+      <Wip>
       <div style={{ padding: '14px 20px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
           <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Mes sorties</h2>
@@ -358,8 +366,10 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
           )}
         </div>
       </div>
+      </Wip>
 
       {/* Paramètres */}
+      <Wip>
       <div style={{ padding: '14px 20px 10px' }}>
         <h2 className="serif" style={{ fontSize: 18, margin: '0 0 10px', fontWeight: 600 }}>Paramètres</h2>
         <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
@@ -389,6 +399,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
           ))}
         </div>
       </div>
+      </Wip>
 
       <div style={{ padding: '18px 20px' }}>
         <button onClick={handleSignOut} disabled={signingOut} style={{

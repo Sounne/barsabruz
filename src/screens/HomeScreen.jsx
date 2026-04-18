@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip } from '../components/ui'
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 import { useData } from '../context/DataContext'
 
@@ -31,18 +31,20 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
             Où allez-vous ce soir ?
           </div>
         </div>
-        <div style={{
-          width: 42, height: 42, borderRadius: '50%',
-          background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: 'var(--shadow-card)', position: 'relative',
-        }}>
-          <Icon name="bell" size={20} color="var(--ink-soft)"/>
-          <span style={{
-            position: 'absolute', top: 9, right: 10,
-            width: 8, height: 8, borderRadius: '50%', background: 'var(--terracotta)',
-            border: '2px solid #fff',
-          }}/>
-        </div>
+        <Wip>
+          <div style={{
+            width: 42, height: 42, borderRadius: '50%',
+            background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: 'var(--shadow-card)', position: 'relative',
+          }}>
+            <Icon name="bell" size={20} color="var(--ink-soft)"/>
+            <span style={{
+              position: 'absolute', top: 9, right: 10,
+              width: 8, height: 8, borderRadius: '50%', background: 'var(--terracotta)',
+              border: '2px solid #fff',
+            }}/>
+          </div>
+        </Wip>
       </div>
 
       {/* Search */}
@@ -151,55 +153,56 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNavigateTab }) =>
       </div>
 
       {/* Annonces publiques */}
-      <div style={{ padding: '22px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <div>
-          <h2 className="serif" style={{ fontSize: 20, margin: 0, fontWeight: 600 }}>Ils sortent ce soir</h2>
-          <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>Rejoignez une soirée en un clic</div>
-        </div>
-      </div>
-      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {publics.slice(0, 3).map(a => (
-          <div key={a.id} onClick={() => onOpenAnnonce(a)}
-            style={{
-              background: '#fff', borderRadius: 16, padding: 14,
-              boxShadow: 'var(--shadow-card)', cursor: 'pointer',
-              borderLeft: `3px solid ${a.color}`,
-            }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar letter={a.avatar} color={a.color} size={32}/>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                  <b>{a.author}</b> propose
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.when} · {a.bar}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: -6 }}>
-                {[...Array(Math.min(a.attending, 3))].map((_, i) => (
-                  <div key={i} style={{
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: ['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D'][i],
-                    border: '2px solid #fff',
-                    marginLeft: i === 0 ? 0 : -8,
-                  }}/>
-                ))}
-              </div>
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10, lineHeight: 1.3 }}>
-              {a.title}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-              <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
-                {a.attending + (joined[a.id] ? 1 : 0)}/{a.maxAttending} places
-              </div>
-              <div onClick={e => { e.stopPropagation(); setJoined(j => ({...j, [a.id]: !j[a.id]})); }} style={{
-                background: joined[a.id] ? 'var(--success)' : 'var(--ink)', color: '#fff',
-                padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                transition: 'background 0.2s',
-              }}>{joined[a.id] ? '✓ Je viens' : 'Je viens'}</div>
-            </div>
+      <Wip>
+        <div style={{ padding: '22px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div>
+            <h2 className="serif" style={{ fontSize: 20, margin: 0, fontWeight: 600 }}>Ils sortent ce soir</h2>
+            <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>Rejoignez une soirée en un clic</div>
           </div>
-        ))}
-      </div>
+        </div>
+        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {publics.slice(0, 3).map(a => (
+            <div key={a.id}
+              style={{
+                background: '#fff', borderRadius: 16, padding: 14,
+                boxShadow: 'var(--shadow-card)',
+                borderLeft: `3px solid ${a.color}`,
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar letter={a.avatar} color={a.color} size={32}/>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+                    <b>{a.author}</b> propose
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.when} · {a.bar}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: -6 }}>
+                  {[...Array(Math.min(a.attending, 3))].map((_, i) => (
+                    <div key={i} style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: ['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D'][i],
+                      border: '2px solid #fff',
+                      marginLeft: i === 0 ? 0 : -8,
+                    }}/>
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10, lineHeight: 1.3 }}>
+                {a.title}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
+                  {a.attending}/{a.maxAttending} places
+                </div>
+                <div style={{
+                  background: 'var(--ink)', color: '#fff',
+                  padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                }}>Je viens</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Wip>
     </div>
   );
 };
@@ -289,7 +292,7 @@ const DiscoverScreen = ({ onOpenBar }) => {
           ))}
         </div>
       ) : (
-        <MapView bars={bars} onOpenBar={onOpenBar}/>
+        <Wip><MapView bars={bars} onOpenBar={onOpenBar}/></Wip>
       )}
     </div>
   );
