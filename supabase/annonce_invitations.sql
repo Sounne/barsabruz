@@ -22,27 +22,37 @@ drop policy if exists "Create invitations"         on public.annonce_invitations
 drop policy if exists "Respond to own invitation"  on public.annonce_invitations;
 drop policy if exists "Delete own invitation"      on public.annonce_invitations;
 
--- Inviter and invitee can both read; annonce creator can also read invitations for their sortie
+-- SECURITY DEFINER helper to avoid RLS recursion between annonces
+-- and annonce_invitations (each policy otherwise references the other table).
+create or replace function public.user_owns_annonce(p_annonce_id text, p_user_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.annonces
+    where id = p_annonce_id and user_id = p_user_id
+  );
+$$;
+
+create or replace function public.user_invited_to_annonce(p_annonce_id text, p_user_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.annonce_invitations
+    where annonce_id = p_annonce_id and invitee_id = p_user_id
+  );
+$$;
+
+-- inviter_id is the annonce creator (enforced by the INSERT policy below),
+-- so this covers the "creator sees invitations for their sortie" case
+-- without touching annonces and without causing RLS recursion.
 create policy "See own invitations"
   on public.annonce_invitations for select
-  using (
-    auth.uid() = inviter_id
-    or auth.uid() = invitee_id
-    or exists (
-      select 1 from public.annonces a
-      where a.id = annonce_invitations.annonce_id and a.user_id = auth.uid()
-    )
-  );
+  using (auth.uid() = inviter_id or auth.uid() = invitee_id);
 
 -- Only the annonce creator may send invitations
 create policy "Create invitations"
   on public.annonce_invitations for insert
   with check (
     auth.uid() = inviter_id
-    and exists (
-      select 1 from public.annonces a
-      where a.id = annonce_invitations.annonce_id and a.user_id = auth.uid()
-    )
+    and public.user_owns_annonce(annonce_id, auth.uid())
   );
 
 -- Invitee can update status to accept/decline
@@ -79,10 +89,7 @@ create policy "Read annonces by visibility"
       select 1 from public.annonce_participants ap
       where ap.annonce_id = annonces.id and ap.user_id = auth.uid()
     )
-    or exists (
-      select 1 from public.annonce_invitations ai
-      where ai.annonce_id = annonces.id and ai.invitee_id = auth.uid()
-    )
+    or public.user_invited_to_annonce(annonces.id, auth.uid())
   );
 
 -- ─── Atomic accept: mark invitation accepted + add as participant + recount ───
