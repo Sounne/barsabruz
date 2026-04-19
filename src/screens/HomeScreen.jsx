@@ -35,7 +35,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
           {/* Author + close */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar letter={a.avatar} color={a.color} size={42}/>
+              <Avatar letter={a.avatar} src={a.avatar_url} color={a.color} size={42}/>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{a.author}</div>
                 <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>
@@ -438,7 +438,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                 cursor: 'pointer',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Avatar letter={a.avatar} color={a.color} size={32}/>
+                  <Avatar letter={a.avatar} src={a.avatar_url} color={a.color} size={32}/>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
                       <b>{a.author}</b>{isCreator ? ' · Ta sortie' : ' propose'}

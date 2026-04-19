@@ -7,8 +7,8 @@ export async function getFriends(userId) {
     .from('friendships')
     .select(`
       id, status, created_at,
-      requester_p:profiles!friendships_requester_fkey(id, name, handle, avatar_letter, color),
-      addressee_p:profiles!friendships_addressee_fkey(id, name, handle, avatar_letter, color)
+      requester_p:profiles!friendships_requester_fkey(id, name, handle, avatar_letter, avatar_url, color),
+      addressee_p:profiles!friendships_addressee_fkey(id, name, handle, avatar_letter, avatar_url, color)
     `)
     .eq('status', 'accepted')
     .or(`requester.eq.${userId},addressee.eq.${userId}`)
@@ -24,7 +24,7 @@ export async function getPendingRequests(userId) {
     .from('friendships')
     .select(`
       id, created_at,
-      requester_p:profiles!friendships_requester_fkey(id, name, handle, avatar_letter, color)
+      requester_p:profiles!friendships_requester_fkey(id, name, handle, avatar_letter, avatar_url, color)
     `)
     .eq('addressee', userId)
     .eq('status', 'pending')
@@ -61,7 +61,7 @@ export async function removeFriend(friendshipId) {
 export async function searchUsers(query) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, handle, avatar_letter, color')
+    .select('id, name, handle, avatar_letter, avatar_url, color')
     .or(`name.ilike.%${query}%,handle.ilike.%${query}%`)
     .limit(10)
   if (error) throw error
@@ -151,7 +151,7 @@ export async function getGroupMessages(groupId, limit = 50) {
     .from('group_messages')
     .select(`
       id, text, reactions, shared_event, created_at,
-      sender:profiles!group_messages_sender_id_fkey(id, name, avatar_letter, color)
+      sender:profiles!group_messages_sender_id_fkey(id, name, avatar_letter, avatar_url, color)
     `)
     .eq('group_id', groupId)
     .order('created_at', { ascending: true })
@@ -166,7 +166,7 @@ export async function sendGroupMessage(groupId, senderId, text, sharedEvent = nu
     .insert({ group_id: groupId, sender_id: senderId, text, shared_event: sharedEvent })
     .select(`
       id, text, reactions, shared_event, created_at,
-      sender:profiles!group_messages_sender_id_fkey(id, name, avatar_letter, color)
+      sender:profiles!group_messages_sender_id_fkey(id, name, avatar_letter, avatar_url, color)
     `)
     .single()
   if (error) throw error

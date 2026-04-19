@@ -346,7 +346,7 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0 }) => {
                       display: 'flex', alignItems: 'center', gap: 10,
                       boxShadow: 'var(--shadow-card)',
                     }}>
-                      <Avatar letter={u.avatar_letter} color={u.color} size={36}/>
+                      <Avatar letter={u.avatar_letter} src={u.avatar_url} color={u.color} size={36}/>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600 }}>{u.name}</div>
                         <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{u.handle}</div>
@@ -380,7 +380,7 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0 }) => {
                   boxShadow: 'var(--shadow-card)',
                   border: '1px solid rgba(198,93,61,0.2)',
                 }}>
-                  <Avatar letter={req.avatar_letter} color={req.color} size={40}/>
+                  <Avatar letter={req.avatar_letter} src={req.avatar_url} color={req.color} size={40}/>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{req.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{req.handle}</div>
@@ -432,7 +432,7 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0 }) => {
                   display: 'flex', alignItems: 'center', gap: 10,
                   boxShadow: 'var(--shadow-card)', cursor: 'pointer',
                 }}>
-                  <Avatar letter={friend.avatar_letter} color={friend.color} size={40}/>
+                  <Avatar letter={friend.avatar_letter} src={friend.avatar_url} color={friend.color} size={40}/>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{friend.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{friend.handle}</div>
@@ -677,7 +677,7 @@ const GroupChatScreen = ({ group, onBack, onDelete }) => {
           const isMe = m.sender?.id === authUser?.id
           return (
             <div key={m.id} style={{ display: 'flex', gap: 8, flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-              {!isMe && <Avatar letter={m.sender?.avatar_letter} color={m.sender?.color} size={28}/>}
+              {!isMe && <Avatar letter={m.sender?.avatar_letter} src={m.sender?.avatar_url} color={m.sender?.color} size={28}/>}
               <div style={{ maxWidth: '75%' }}>
                 {!isMe && <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginBottom: 3, fontWeight: 500 }}>{m.sender?.name}</div>}
                 <div style={{
@@ -770,7 +770,7 @@ const DMChatScreen = ({ friend, onBack }) => {
         <button onClick={onBack} style={{ background: 'none', border: 'none', padding: 6, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
           <Icon name="back" size={22} color="var(--ink)"/>
         </button>
-        <Avatar letter={friend.avatar_letter} color={friend.color} size={40}/>
+        <Avatar letter={friend.avatar_letter} src={friend.avatar_url} color={friend.color} size={40}/>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>{friend.name}</div>
           <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{friend.handle}</div>
@@ -787,7 +787,7 @@ const DMChatScreen = ({ friend, onBack }) => {
           const isMe = m.sender_id === authUser?.id
           return (
             <div key={m.id} style={{ display: 'flex', gap: 8, flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-              {!isMe && <Avatar letter={friend.avatar_letter} color={friend.color} size={28}/>}
+              {!isMe && <Avatar letter={friend.avatar_letter} src={friend.avatar_url} color={friend.color} size={28}/>}
               <div style={{ maxWidth: '75%' }}>
                 <div style={{
                   padding: '9px 13px',
