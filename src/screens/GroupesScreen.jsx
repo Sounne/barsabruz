@@ -1020,6 +1020,7 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
   const [date, setDate] = React.useState('')
   const [time, setTime] = React.useState('20:00')
   const [maxAttending, setMaxAttending] = React.useState(10)
+  const [visibility, setVisibility] = React.useState('private')
   const [submitting, setSubmitting] = React.useState(false)
   const [error, setError] = React.useState(null)
 
@@ -1048,6 +1049,7 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
         avatar_url: profile?.avatar_url ?? null,
         color: profile?.color ?? '#C65D3D',
         user_id: authUser.id,
+        visibility,
       })
       addAnnonce?.({ ...row, emoji: sortieEmoji })
       onCreated?.()
@@ -1184,6 +1186,34 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-mute)', marginTop: 4 }}>
               <span>2</span><span>30</span>
+            </div>
+          </div>
+
+          {/* Visibility */}
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 8 }}>Visibilité</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { id: 'private', label: 'Groupe privé', icon: 'lock', sub: 'Seulement les membres invités' },
+                { id: 'friends', label: 'Ouvert aux amis', icon: 'users', sub: 'Visible par tes amis, qui peuvent rejoindre' },
+                { id: 'public', label: 'Ouvert à tous', icon: 'globe', sub: 'Visible par tous les utilisateurs' },
+              ].map(p => (
+                <button key={p.id} onClick={() => setVisibility(p.id)} style={{
+                  padding: 12, borderRadius: 12, textAlign: 'left',
+                  background: visibility === p.id ? 'rgba(198,93,61,0.08)' : '#fff',
+                  border: visibility === p.id ? '2px solid var(--terracotta)' : '1px solid var(--line)',
+                  fontFamily: 'inherit', cursor: 'pointer',
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                }}>
+                  <div style={{ marginTop: 2, flexShrink: 0 }}>
+                    <Icon name={p.icon} size={18} color={visibility === p.id ? 'var(--terracotta)' : 'var(--ink-soft)'}/>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{p.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 2, lineHeight: 1.35 }}>{p.sub}</div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
