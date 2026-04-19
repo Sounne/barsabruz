@@ -2,15 +2,19 @@ import React from 'react'
 import { Icon, Avatar, BarHero, shade, Wip } from '../components/ui'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
-import { signOut } from '../services'
+import { signOut, uploadAvatar } from '../services'
 
 // ─────────── EDIT PROFILE SHEET ───────────
-const EditProfileSheet = ({ user, onSave, onClose }) => {
+const EditProfileSheet = ({ user, onSave, onClose, authUserId }) => {
   const [name, setName] = React.useState(user.name)
   const [handle, setHandle] = React.useState(user.handle)
   const [bio, setBio] = React.useState(user.bio || '')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
+  const [avatarPreview, setAvatarPreview] = React.useState(user.avatarUrl || null)
+  const [avatarFile, setAvatarFile] = React.useState(null)
+  const [uploading, setUploading] = React.useState(false)
+  const fileInputRef = React.useRef(null)
 
   const inputStyle = {
     width: '100%', padding: '12px 14px',
@@ -20,19 +24,34 @@ const EditProfileSheet = ({ user, onSave, onClose }) => {
     transition: 'border-color 0.15s',
   }
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
+
   const handleSaveClick = async () => {
     if (!name.trim()) { setError('Le prénom est requis.'); return }
     setError('')
     setSaving(true)
     try {
+      let avatarUrl = user.avatarUrl || null
+      if (avatarFile && authUserId) {
+        setUploading(true)
+        avatarUrl = await uploadAvatar(authUserId, avatarFile)
+        setUploading(false)
+      }
       await onSave({
         name: name.trim(),
         handle: handle.trim(),
         bio: bio.trim(),
         avatar_letter: name.trim()[0]?.toUpperCase() || 'E',
+        avatar_url: avatarUrl,
       })
       onClose()
     } catch (err) {
+      setUploading(false)
       setError(err.message || 'Erreur lors de la sauvegarde.')
     } finally {
       setSaving(false)
@@ -65,10 +84,19 @@ const EditProfileSheet = ({ user, onSave, onClose }) => {
           </button>
         </div>
 
-        {/* Avatar preview */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-          <div style={{ position: 'relative' }}>
-            <Avatar letter={name[0]?.toUpperCase() || 'E'} color={user.color} size={80} ring/>
+        {/* Avatar picker */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24, gap: 8 }}>
+          <div
+            style={{ position: 'relative', cursor: 'pointer' }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Avatar
+              letter={name[0]?.toUpperCase() || 'E'}
+              src={avatarPreview}
+              color={user.color}
+              size={80}
+              ring
+            />
             <div style={{
               position: 'absolute', bottom: 0, right: 0,
               width: 26, height: 26, borderRadius: '50%',
@@ -78,6 +106,17 @@ const EditProfileSheet = ({ user, onSave, onClose }) => {
               <Icon name="plus" size={13} color="#fff"/>
             </div>
           </div>
+          <span style={{ fontSize: 11, color: 'var(--terracotta)', fontWeight: 600, cursor: 'pointer' }}
+            onClick={() => fileInputRef.current?.click()}>
+            {uploading ? 'Upload…' : 'Changer la photo'}
+          </span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
         </div>
 
         {/* Fields */}
@@ -290,7 +329,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
         boxShadow: '0 -4px 20px rgba(42,31,23,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
-          <Avatar letter={user.avatar} color={user.color} size={76} ring/>
+          <Avatar letter={user.avatar} src={user.avatarUrl} color={user.color} size={76} ring/>
           <div style={{ flex: 1, paddingBottom: 4 }}>
             <div className="serif" style={{ fontSize: 22, fontWeight: 600 }}>{user.name}</div>
             <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>{user.handle}</div>
@@ -467,7 +506,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
 
       {/* Edit profile sheet */}
       {editing && (
-        <EditProfileSheet user={user} onSave={handleSave} onClose={() => setEditing(false)}/>
+        <EditProfileSheet user={user} onSave={handleSave} onClose={() => setEditing(false)} authUserId={authUser?.id}/>
       )}
     </div>
   )

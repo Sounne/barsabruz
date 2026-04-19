@@ -131,7 +131,7 @@ export async function fetchJoinedAnnonceIds(userId) {
 export async function fetchAnnonceParticipants(annonceId) {
   const { data, error } = await supabase
     .from('annonce_participants')
-    .select('user_id, joined_at, profiles(name, avatar_letter, color)')
+    .select('user_id, joined_at, profiles(name, avatar_letter, avatar_url, color)')
     .eq('annonce_id', annonceId)
     .order('joined_at')
   if (error) throw error
@@ -142,7 +142,7 @@ export async function fetchAllAnnonceParticipants(annonceIds) {
   if (!annonceIds?.length) return {}
   const { data, error } = await supabase
     .from('annonce_participants')
-    .select('annonce_id, user_id, joined_at, profiles(name, avatar_letter, color)')
+    .select('annonce_id, user_id, joined_at, profiles(name, avatar_letter, avatar_url, color)')
     .in('annonce_id', annonceIds)
     .order('joined_at')
   if (error) throw error
@@ -240,4 +240,15 @@ export async function updateProfile(userId, updates) {
 
   if (error) throw error
   return data
+}
+
+export async function uploadAvatar(userId, file) {
+  const ext = file.name.split('.').pop().toLowerCase()
+  const path = `${userId}/avatar.${ext}`
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { upsert: true, contentType: file.type })
+  if (error) throw error
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  return data.publicUrl
 }

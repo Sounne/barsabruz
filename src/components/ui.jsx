@@ -50,17 +50,21 @@ const Icon = ({ name, size = 20, color = 'currentColor', stroke = 1.8 }) => {
 };
 
 // ─────────── AVATAR ───────────
-const Avatar = ({ letter, color = '#C65D3D', size = 36, ring = false, style }) => (
+const Avatar = ({ letter, src, color = '#C65D3D', size = 36, ring = false, style }) => (
   <div style={{
     width: size, height: size, borderRadius: '50%',
-    background: `linear-gradient(135deg, ${color}, ${shade(color, -15)})`,
+    background: src ? '#e8e0d8' : `linear-gradient(135deg, ${color}, ${shade(color, -15)})`,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     color: '#fff', fontWeight: 600, fontSize: size * 0.42,
     fontFamily: 'Fraunces, Georgia, serif',
-    flexShrink: 0,
+    flexShrink: 0, overflow: 'hidden',
     boxShadow: ring ? `0 0 0 2px #fff, 0 0 0 4px ${color}` : 'none',
     ...style,
-  }}>{letter}</div>
+  }}>
+    {src
+      ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}/>
+      : letter}
+  </div>
 );
 
 function shade(hex, pct) {

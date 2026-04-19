@@ -103,7 +103,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 {displayParticipants.slice(0, 5).map((p, i) => (
-                  <Avatar key={p.user_id} letter={p.avatar_letter} color={p.color} size={28}
+                  <Avatar key={p.user_id} letter={p.avatar_letter} src={p.avatar_url} color={p.color} size={28}
                     style={{ marginLeft: i === 0 ? 0 : -10, border: '2px solid #fff' }}/>
                 ))}
                 {participantCount > 5 && (
@@ -122,7 +122,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
               <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {displayParticipants.map(p => (
                   <div key={p.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Avatar letter={p.avatar_letter} color={p.color} size={24}/>
+                    <Avatar letter={p.avatar_letter} src={p.avatar_url} color={p.color} size={24}/>
                     <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-soft)' }}>{p.name}</span>
                   </div>
                 ))}
@@ -447,7 +447,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                   </div>
                   <div style={{ display: 'flex' }}>
                     {(participantsMap[a.id] ?? []).slice(0, 3).map((p, i) => (
-                      <Avatar key={p.user_id} letter={p.avatar_letter} color={p.color} size={22}
+                      <Avatar key={p.user_id} letter={p.avatar_letter} src={p.avatar_url} color={p.color} size={22}
                         style={{ marginLeft: i === 0 ? 0 : -8, border: '2px solid #fff' }}/>
                     ))}
                   </div>
