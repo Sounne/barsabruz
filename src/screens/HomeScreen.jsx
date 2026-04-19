@@ -674,7 +674,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--ink-mute)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span>{a.when} · {a.bar}</span>
-                      {a.visibility && a.visibility !== 'public' && <VisibilityBadge visibility={a.visibility}/>}
+                      {a.visibility && <VisibilityBadge visibility={a.visibility}/>}
                     </div>
                   </div>
                   <div style={{ display: 'flex' }}>
