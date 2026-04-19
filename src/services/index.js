@@ -181,6 +181,89 @@ export async function deleteAnnonce(annonceId) {
   if (error) throw error
 }
 
+// ─────────── ANNONCE INVITATIONS ───────────
+
+export async function sendAnnonceInvitations(annonceId, inviterId, inviteeIds) {
+  if (!inviteeIds?.length) return []
+  const rows = inviteeIds.map(id => ({
+    annonce_id: annonceId,
+    inviter_id: inviterId,
+    invitee_id: id,
+  }))
+  const { data, error } = await supabase
+    .from('annonce_invitations')
+    .upsert(rows, { onConflict: 'annonce_id,invitee_id', ignoreDuplicates: true })
+    .select()
+  if (error) throw error
+  return data ?? []
+}
+
+export async function fetchPendingInvitations(userId) {
+  const { data, error } = await supabase
+    .from('annonce_invitations')
+    .select('id, annonce_id, inviter_id, status, created_at')
+    .eq('invitee_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  if (!data?.length) return []
+
+  const annonceIds = [...new Set(data.map(r => r.annonce_id))]
+  const inviterIds = [...new Set(data.map(r => r.inviter_id))]
+
+  const [{ data: annonces, error: aErr }, { data: profiles, error: pErr }] = await Promise.all([
+    supabase.from('annonces').select('*').in('id', annonceIds),
+    supabase.from('profiles').select('id, name, avatar_letter, avatar_url, color').in('id', inviterIds),
+  ])
+  if (aErr) throw aErr
+  if (pErr) throw pErr
+
+  const annonceById = Object.fromEntries((annonces ?? []).map(a => [a.id, a]))
+  const profileById = Object.fromEntries((profiles ?? []).map(p => [p.id, p]))
+
+  return data
+    .map(r => {
+      const a = annonceById[r.annonce_id]
+      if (!a) return null
+      return {
+        invitationId: r.id,
+        createdAt: r.created_at,
+        inviter: profileById[r.inviter_id] ?? null,
+        annonce: {
+          ...a,
+          when: a.when_text,
+          maxAttending: a.max_attending,
+        },
+      }
+    })
+    .filter(Boolean)
+}
+
+export async function fetchAnnonceInvitees(annonceId) {
+  const { data, error } = await supabase
+    .from('annonce_invitations')
+    .select('id, invitee_id, status, profiles:invitee_id(name, avatar_letter, avatar_url, color)')
+    .eq('annonce_id', annonceId)
+  if (error) throw error
+  return (data ?? []).map(r => ({
+    invitationId: r.id,
+    user_id: r.invitee_id,
+    status: r.status,
+    ...(r.profiles ?? {}),
+  }))
+}
+
+export async function acceptAnnonceInvitation(invitationId) {
+  const { data, error } = await supabase.rpc('accept_annonce_invitation', { p_invitation_id: invitationId })
+  if (error) throw error
+  return data
+}
+
+export async function declineAnnonceInvitation(invitationId) {
+  const { error } = await supabase.rpc('decline_annonce_invitation', { p_invitation_id: invitationId })
+  if (error) throw error
+}
+
 export function subscribeToAnnonces(callback) {
   return supabase
     .channel('public:annonces')

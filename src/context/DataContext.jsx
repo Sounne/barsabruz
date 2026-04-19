@@ -6,6 +6,9 @@ import {
   fetchJoinedAnnonceIds, deleteAnnonce as svcDeleteAnnonce,
   subscribeToAnnonces, unsubscribeChannel,
   fetchAllAnnonceParticipants,
+  fetchPendingInvitations,
+  acceptAnnonceInvitation, declineAnnonceInvitation,
+  sendAnnonceInvitations,
 } from '../services'
 import { getAccessibleGroups, getFriends } from '../lib/chatApi'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
@@ -22,7 +25,18 @@ export function DataProvider({ children }) {
   const [myJoins, setMyJoins] = React.useState(new Set())
   const [myGroups, setMyGroups] = React.useState([])
   const [friends, setFriends] = React.useState([])
+  const [invitations, setInvitations] = React.useState([])
   const [loading, setLoading] = React.useState(true)
+
+  const refreshInvitations = React.useCallback(async () => {
+    if (!user) { setInvitations([]); return }
+    try {
+      const list = await fetchPendingInvitations(user.id)
+      setInvitations(list)
+    } catch {
+      setInvitations([])
+    }
+  }, [user?.id])
 
   const loadParticipants = React.useCallback(async (annoncesList) => {
     const ids = (annoncesList ?? [])
@@ -103,13 +117,14 @@ export function DataProvider({ children }) {
 
   // Load groups and friends when auth user changes
   React.useEffect(() => {
-    if (!user) { setMyGroups([]); setFriends([]); return }
+    if (!user) { setMyGroups([]); setFriends([]); setInvitations([]); return }
     getAccessibleGroups(user.id)
       .then(all => setMyGroups(all.filter(g => g.isMember)))
       .catch(() => {})
     getFriends(user.id)
       .then(setFriends)
       .catch(() => {})
+    refreshInvitations()
   }, [user?.id])
 
   const saveProfile = React.useCallback(async (updates) => {
@@ -201,6 +216,38 @@ export function DataProvider({ children }) {
     setAnnonces(prev => [annonce, ...(prev ?? [])])
   }, [])
 
+  const acceptInvitation = React.useCallback(async (invitationId) => {
+    const inv = invitations.find(i => i.invitationId === invitationId)
+    setInvitations(prev => prev.filter(i => i.invitationId !== invitationId))
+    try {
+      const newCount = await acceptAnnonceInvitation(invitationId)
+      if (inv) {
+        const existing = (annonces ?? []).some(a => a.id === inv.annonce.id)
+        setAnnonces(prev => {
+          const list = prev ?? []
+          if (existing) {
+            return list.map(a => a.id === inv.annonce.id ? { ...a, attending: newCount } : a)
+          }
+          return [{ ...inv.annonce, attending: newCount }, ...list]
+        })
+        setMyJoins(prev => new Set([...prev, inv.annonce.id]))
+      }
+    } catch (err) {
+      console.error(err)
+      refreshInvitations()
+    }
+  }, [invitations, annonces, refreshInvitations])
+
+  const declineInvitation = React.useCallback(async (invitationId) => {
+    setInvitations(prev => prev.filter(i => i.invitationId !== invitationId))
+    try { await declineAnnonceInvitation(invitationId) } catch (err) { console.error(err); refreshInvitations() }
+  }, [refreshInvitations])
+
+  const inviteFriendsToAnnonce = React.useCallback(async (annonceId, inviteeIds) => {
+    if (!user || !inviteeIds?.length) return
+    await sendAnnonceInvitations(annonceId, user.id, inviteeIds)
+  }, [user?.id])
+
   const value = {
     bars: bars ?? BARS_DATA,
     annonces: annonces ?? ANNONCES_PUBLIC,
@@ -215,6 +262,11 @@ export function DataProvider({ children }) {
     joinedAnnonceIds: myJoins,
     myGroups,
     friends,
+    invitations,
+    acceptInvitation,
+    declineInvitation,
+    inviteFriendsToAnnonce,
+    refreshInvitations,
     loading,
   }
 

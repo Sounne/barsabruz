@@ -6,9 +6,138 @@ import { useAuth } from '../context/AuthContext'
 
 const getParticipantCount = (attending, participantRows) => Math.max(attending, participantRows + 1)
 
+const VISIBILITY_META = {
+  private: { label: 'Privé', icon: 'lock', color: '#6B3A4A' },
+  friends: { label: 'Amis', icon: 'users', color: '#4A7C59' },
+  public:  { label: 'Public', icon: 'globe', color: '#3A6AB0' },
+}
+
+const VisibilityBadge = ({ visibility, size = 'sm' }) => {
+  const m = VISIBILITY_META[visibility] || VISIBILITY_META.public
+  const isLg = size === 'lg'
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: isLg ? '3px 8px' : '2px 6px',
+      borderRadius: 999,
+      background: `${m.color}15`, color: m.color,
+      fontSize: isLg ? 11 : 10, fontWeight: 600,
+      textTransform: 'uppercase', letterSpacing: '0.04em',
+    }}>
+      <Icon name={m.icon} size={isLg ? 11 : 10} color={m.color}/>
+      {m.label}
+    </span>
+  )
+}
+
 // Screens: Home, Discover, Bar Detail
 
 // ═══════════════ SORTIE DETAIL SHEET ═══════════════
+
+const InviteFriendsSheet = ({ annonce, onClose, onInvited }) => {
+  const { friends, inviteFriendsToAnnonce } = useData()
+  const [selected, setSelected] = React.useState(new Set())
+  const [submitting, setSubmitting] = React.useState(false)
+  const [error, setError] = React.useState(null)
+
+  const toggle = (id) => setSelected(prev => {
+    const n = new Set(prev)
+    n.has(id) ? n.delete(id) : n.add(id)
+    return n
+  })
+
+  const handleSend = async () => {
+    if (!selected.size) return
+    setSubmitting(true); setError(null)
+    try {
+      await inviteFriendsToAnnonce(annonce.id, [...selected])
+      onInvited?.(selected.size)
+      onClose()
+    } catch (err) {
+      console.error(err)
+      setError(err?.message || 'Impossible d\'envoyer les invitations.')
+    } finally { setSubmitting(false) }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 250,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'flex-end',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', background: 'var(--paper)',
+        borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        maxHeight: '80%', overflow: 'auto', animation: 'slideUp 0.25s',
+      }}>
+        <div style={{ padding: '14px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 14, color: 'var(--ink-soft)', cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Inviter des amis</div>
+          <button onClick={handleSend} disabled={!selected.size || submitting} style={{
+            fontSize: 14, fontWeight: 600,
+            color: selected.size && !submitting ? 'var(--terracotta)' : 'var(--ink-mute)',
+            background: 'none', border: 'none',
+            cursor: selected.size && !submitting ? 'pointer' : 'default',
+            fontFamily: 'inherit',
+          }}>{submitting ? '…' : `Envoyer${selected.size ? ` (${selected.size})` : ''}`}</button>
+        </div>
+
+        <div style={{ padding: 20 }}>
+          <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>Qui veux-tu inviter ?</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-mute)', marginTop: 4 }}>
+            Tes amis recevront une invitation à rejoindre « {annonce.title} ».
+          </div>
+
+          {friends.length === 0 ? (
+            <div style={{
+              marginTop: 20, padding: 20, borderRadius: 14, textAlign: 'center',
+              background: 'rgba(198,93,61,0.06)', border: '1px dashed rgba(198,93,61,0.25)',
+            }}>
+              <div style={{ fontSize: 24 }}>👋</div>
+              <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 6 }}>
+                Tu n'as pas encore d'amis à inviter.
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {friends.map(f => {
+                const isSel = selected.has(f.id)
+                return (
+                  <button key={f.id} onClick={() => toggle(f.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 12,
+                    background: isSel ? 'rgba(198,93,61,0.1)' : '#fff',
+                    border: isSel ? '2px solid var(--terracotta)' : '1px solid var(--line)',
+                    fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+                  }}>
+                    <Avatar letter={f.avatar_letter} src={f.avatar_url} color={f.color} size={36}/>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{f.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{f.handle}</div>
+                    </div>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: isSel ? 'var(--terracotta)' : '#fff',
+                      border: isSel ? 'none' : '1.5px solid var(--line)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 12, fontWeight: 700,
+                    }}>{isSel ? '✓' : ''}</div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {error && (
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: 'rgba(198,93,61,0.1)', fontSize: 13, color: 'var(--terracotta)' }}>
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUser, onJoin, onUnjoin, onDelete, onClose }) => {
   const displayParticipants = participants ?? []
@@ -16,6 +145,8 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
   const isFull = participantCount >= a.maxAttending
   const canJoin = authUser && !joined && !isFull && !isCreator
   const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [showInvite, setShowInvite] = React.useState(false)
+  const [invitedToast, setInvitedToast] = React.useState(null)
 
   return (
     <div style={{
@@ -69,6 +200,11 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
           <div className="serif" style={{ fontSize: 22, fontWeight: 600, marginTop: 16, lineHeight: 1.25 }}>
             {a.title}
           </div>
+          {a.visibility && (
+            <div style={{ marginTop: 8 }}>
+              <VisibilityBadge visibility={a.visibility} size="lg"/>
+            </div>
+          )}
 
           {/* Info rows */}
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -141,8 +277,29 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
 
           {/* CTAs */}
           {isCreator ? (
-            <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: 'rgba(198,93,61,0.06)', textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)' }}>
-              C'est ta sortie · {participantCount} personne{participantCount !== 1 ? 's' : ''} participe{participantCount !== 1 ? 'nt' : ''}
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ padding: 12, borderRadius: 12, background: 'rgba(198,93,61,0.06)', textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)' }}>
+                C'est ta sortie · {participantCount} personne{participantCount !== 1 ? 's' : ''} participe{participantCount !== 1 ? 'nt' : ''}
+              </div>
+              {a.visibility === 'private' && (
+                <button onClick={() => setShowInvite(true)} style={{
+                  width: '100%', padding: '13px 0', borderRadius: 14,
+                  background: 'var(--terracotta)', color: '#fff', border: 'none',
+                  fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
+                  <Icon name="plus" size={15} color="#fff"/>
+                  Inviter des amis
+                </button>
+              )}
+              {invitedToast && (
+                <div style={{
+                  padding: 10, borderRadius: 10, fontSize: 13, textAlign: 'center',
+                  background: 'rgba(74,124,89,0.12)', color: '#4A7C59', fontWeight: 500,
+                }}>
+                  ✓ {invitedToast} invitation{invitedToast > 1 ? 's' : ''} envoyée{invitedToast > 1 ? 's' : ''}
+                </div>
+              )}
             </div>
           ) : joined ? (
             <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
@@ -174,6 +331,14 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
             }}>
               {isFull ? 'Complet' : !authUser ? 'Connecte-toi pour rejoindre' : 'Je viens !'}
             </button>
+          )}
+
+          {showInvite && (
+            <InviteFriendsSheet
+              annonce={a}
+              onClose={() => setShowInvite(false)}
+              onInvited={n => { setInvitedToast(n); setTimeout(() => setInvitedToast(null), 3500) }}
+            />
           )}
 
           {/* Delete confirmation */}
@@ -218,7 +383,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
 
 // ═══════════════ HOME SCREEN ═══════════════
 const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab }) => {
-  const { bars: allBars, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds } = useData()
+  const { bars: allBars, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, invitations, acceptInvitation, declineInvitation } = useData()
   const { user: authUser } = useAuth()
   const [search, setSearch] = React.useState('')
   const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
@@ -388,6 +553,64 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
         ))}
       </div>
 
+      {/* Invitations reçues */}
+      {authUser && invitations && invitations.length > 0 && (
+        <div style={{ padding: '22px 20px 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{
+              padding: '2px 8px', borderRadius: 999,
+              background: 'var(--terracotta)', color: '#fff',
+              fontSize: 11, fontWeight: 700,
+            }}>{invitations.length}</span>
+            <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Tu es invité·e</h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {invitations.map(inv => (
+              <div key={inv.invitationId} style={{
+                background: '#fff', borderRadius: 16, padding: 14,
+                boxShadow: 'var(--shadow-card)',
+                border: '1.5px solid rgba(198,93,61,0.25)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Avatar
+                    letter={inv.inviter?.avatar_letter}
+                    src={inv.inviter?.avatar_url}
+                    color={inv.inviter?.color}
+                    size={32}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+                      <b>{inv.inviter?.name ?? 'Quelqu\'un'}</b> t'invite
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>
+                      {inv.annonce.when} · {inv.annonce.bar}
+                    </div>
+                  </div>
+                  <VisibilityBadge visibility={inv.annonce.visibility || 'private'}/>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10, lineHeight: 1.3 }}>
+                  {inv.annonce.title}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button onClick={() => declineInvitation(inv.invitationId)} style={{
+                    flex: 1, padding: '10px 0', borderRadius: 10,
+                    background: 'var(--paper)', color: 'var(--ink-soft)',
+                    border: '1px solid var(--line)', fontSize: 13, fontWeight: 600,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                  }}>Refuser</button>
+                  <button onClick={() => acceptInvitation(inv.invitationId)} style={{
+                    flex: 2, padding: '10px 0', borderRadius: 10,
+                    background: 'var(--terracotta)', color: '#fff',
+                    border: 'none', fontSize: 13, fontWeight: 600,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                  }}>Accepter · Je viens</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Ils sortent ce soir */}
       <div style={{ padding: '22px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -449,7 +672,10 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
                     <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
                       <b>{a.author}</b>{isCreator ? ' · Ta sortie' : ' propose'}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{a.when} · {a.bar}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-mute)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span>{a.when} · {a.bar}</span>
+                      {a.visibility && a.visibility !== 'public' && <VisibilityBadge visibility={a.visibility}/>}
+                    </div>
                   </div>
                   <div style={{ display: 'flex' }}>
                     {(participantsMap[a.id] ?? []).slice(0, 3).map((p, i) => (
