@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon } from './components/ui'
+import { Icon, Avatar } from './components/ui'
 import { useData } from './context/DataContext'
 import { useAuth } from './context/AuthContext'
 import { HomeScreen, DiscoverScreen, MapView, SortieDetailSheet } from './screens/HomeScreen'
@@ -34,7 +34,7 @@ const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
 // ─────────── MAIN APP ───────────
 const App = () => {
   const { session, loading: authLoading } = useAuth()
-  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds } = useData()
+  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user } = useData()
   const [tab, setTab] = React.useState('home')
   const [slideDir, setSlideDir] = React.useState(null)
   const [barId, setBarId] = React.useState(null)
@@ -189,7 +189,21 @@ const App = () => {
                   transform: tab === t.id ? 'scale(1.08)' : 'scale(1)',
                   transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
                 }}>
-                <Icon name={t.icon} size={22} color={tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)'} stroke={tab === t.id ? 2.2 : 1.7}/>
+                {t.id === 'account' && user?.avatarUrl ? (
+                  <Avatar
+                    letter={user.avatar}
+                    src={user.avatarUrl}
+                    color={user.color}
+                    size={22}
+                    style={{
+                      outline: tab === 'account' ? '2px solid var(--terracotta)' : '2px solid transparent',
+                      outlineOffset: 1,
+                      transition: 'outline-color 0.2s',
+                    }}
+                  />
+                ) : (
+                  <Icon name={t.icon} size={22} color={tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)'} stroke={tab === t.id ? 2.2 : 1.7}/>
+                )}
                 <span style={{
                   fontSize: 10, fontWeight: tab === t.id ? 600 : 500,
                   color: tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)',
