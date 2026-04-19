@@ -1045,6 +1045,7 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
         type,
         author: authorName,
         avatar: authorName[0].toUpperCase(),
+        avatar_url: profile?.avatar_url ?? null,
         color: profile?.color ?? '#C65D3D',
         user_id: authUser.id,
       })

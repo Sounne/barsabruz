@@ -241,6 +241,11 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
     deleteAnnonce(annonceId)
     setSelectedAnnonce(null)
   }
+  const enrichAnnonce = (a) =>
+    authUser && a.user_id === authUser.id
+      ? { ...a, avatar_url: userData?.avatarUrl ?? a.avatar_url, avatar: userData?.avatar ?? a.avatar }
+      : a
+
   const bars = search
     ? allBars.filter(b => b.name.toLowerCase().includes(search.toLowerCase()) || b.tagline.toLowerCase().includes(search.toLowerCase()) || b.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
     : allBars;
@@ -422,7 +427,8 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
         </div>
       ) : (
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {publics.slice(0, 5).map(a => {
+          {publics.slice(0, 5).map(raw => {
+            const a = enrichAnnonce(raw)
             const participantCount = getParticipantCount(a.attending, (participantsMap[a.id] ?? []).length)
             const hasJoined = joinedAnnonceIds.has(a.id)
             const isFull = participantCount >= a.maxAttending

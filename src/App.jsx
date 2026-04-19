@@ -189,7 +189,7 @@ const App = () => {
                   transform: tab === t.id ? 'scale(1.08)' : 'scale(1)',
                   transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
                 }}>
-                {t.id === 'account' && user?.avatarUrl ? (
+                {t.id === 'account' ? (
                   <Avatar
                     letter={user.avatar}
                     src={user.avatarUrl}
