@@ -40,11 +40,30 @@ export async function fetchAnnonces() {
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data.map(a => ({
-    ...a,
-    when: a.when_text,
-    maxAttending: a.max_attending,
-  }))
+
+  const userIds = [...new Set(data.map(a => a.user_id).filter(Boolean))]
+  let profilesById = {}
+  if (userIds.length > 0) {
+    const { data: profiles, error: pErr } = await supabase
+      .from('profiles')
+      .select('id, name, avatar_letter, avatar_url, color')
+      .in('id', userIds)
+    if (pErr) throw pErr
+    profilesById = Object.fromEntries((profiles ?? []).map(p => [p.id, p]))
+  }
+
+  return data.map(a => {
+    const p = profilesById[a.user_id]
+    return {
+      ...a,
+      when: a.when_text,
+      maxAttending: a.max_attending,
+      avatar_url: p?.avatar_url ?? a.avatar_url ?? null,
+      avatar: p?.avatar_letter ?? a.avatar,
+      color: p?.color ?? a.color,
+      author: p?.name ?? a.author,
+    }
+  })
 }
 
 export async function createAnnonce(annonce) {
