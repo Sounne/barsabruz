@@ -59,6 +59,56 @@ html, body {
   letter-spacing: -0.01em;
 }
 
+.bar-hero--photo {
+  isolation: isolate;
+  background: linear-gradient(135deg, var(--bar-color), var(--bar-accent));
+}
+
+.bar-hero__photo,
+.bar-hero__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bar-hero__photo {
+  z-index: 0;
+  background-image: var(--bar-photo);
+  background-position: center;
+  background-size: cover;
+  transform: scale(1.08);
+  animation: barHeroPhotoBreath 12s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform, filter;
+}
+
+.bar-hero__vignette {
+  z-index: 1;
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.66) 100%),
+    radial-gradient(circle at center, transparent 42%, rgba(0,0,0,0.22) 100%);
+}
+
+@keyframes barHeroPhotoBreath {
+  0% {
+    transform: scale(1.075);
+    filter: saturate(1.06) contrast(1.04);
+  }
+  50% {
+    transform: scale(1.16);
+    filter: saturate(1.11) contrast(1.06);
+  }
+  100% {
+    transform: scale(1.075);
+    filter: saturate(1.06) contrast(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-hero__photo {
+    animation: none;
+  }
+}
+
 /* Hide scrollbars in scroll regions of the phone */
 .noscroll::-webkit-scrollbar { display: none; }
 .noscroll { scrollbar-width: none; }

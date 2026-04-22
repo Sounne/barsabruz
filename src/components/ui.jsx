@@ -85,11 +85,11 @@ const BarHero = ({ bar, height = 180, small = false }) => {
 
   const containerStyle = bar.image ? {
     height, width: '100%',
-    backgroundImage: `url(${bar.image})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
     position: 'relative', overflow: 'hidden',
     borderRadius: small ? 14 : 0,
+    '--bar-photo': `url(${bar.image})`,
+    '--bar-color': bar.color,
+    '--bar-accent': bar.accent,
   } : {
     height, width: '100%',
     background: `linear-gradient(135deg, ${bar.color}, ${bar.accent})`,
@@ -98,13 +98,12 @@ const BarHero = ({ bar, height = 180, small = false }) => {
   };
 
   return (
-    <div style={containerStyle}>
+    <div className={bar.image ? 'bar-hero bar-hero--photo' : 'bar-hero'} style={containerStyle}>
       {bar.image ? (
-        /* photo overlay */
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.62) 100%)',
-        }}/>
+        <>
+          <div className="bar-hero__photo" />
+          <div className="bar-hero__vignette" />
+        </>
       ) : (
         <>
           {/* dot pattern */}
@@ -126,6 +125,7 @@ const BarHero = ({ bar, height = 180, small = false }) => {
       {/* glyph */}
       <div style={{
         position: 'absolute', right: small ? 10 : 20, bottom: small ? 10 : 20,
+        zIndex: 3,
         width: small ? 44 : 64, height: small ? 44 : 64,
         borderRadius: '50%',
         background: 'rgba(255,255,255,0.2)',
@@ -139,6 +139,7 @@ const BarHero = ({ bar, height = 180, small = false }) => {
       {!small && (
         <div style={{
           position: 'absolute', left: 20, bottom: 20, right: 100,
+          zIndex: 3,
           color: '#fff',
         }}>
           <div className="serif" style={{ fontSize: 32, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.01em', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
