@@ -8,6 +8,7 @@ import { AgendaScreen, EventSheet } from './screens/AgendaScreen'
 import { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet, NewSortieSheet } from './screens/GroupesScreen'
 import { AccountScreen } from './screens/AccountScreen'
 import { AuthScreen } from './screens/AuthScreen'
+import { NotificationsSheet } from './screens/NotificationsSheet'
 
 // ─────────── LOADING SPLASH ───────────
 const LoadingSplash = () => (
@@ -34,7 +35,7 @@ const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
 // ─────────── MAIN APP ───────────
 const App = () => {
   const { session, loading: authLoading } = useAuth()
-  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user } = useData()
+  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount } = useData()
   const [tab, setTab] = React.useState('home')
   const [slideDir, setSlideDir] = React.useState(null)
   const [barId, setBarId] = React.useState(null)
@@ -45,6 +46,7 @@ const App = () => {
   const [newSortie, setNewSortie] = React.useState(false)
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
   const [sortieSheet, setSortieSheet] = React.useState(null)
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false)
 
   const handleTabChange = (newTab) => {
     if (newTab === tab) return
@@ -62,6 +64,7 @@ const App = () => {
     openGroup: (g) => setGroupChat(g),
     openDM: (friend) => setDmChat(friend),
     openAnnonce: (a) => setSortieSheet(a),
+    openNotifications: () => setNotificationsOpen(true),
   }
 
   const handleSortieJoin = () => {
@@ -102,6 +105,7 @@ const App = () => {
             onOpenAnnonce: navigate.openAnnonce,
             onNewSortie: () => setNewSortie(true),
             onNavigateTab: handleTabChange,
+            onOpenNotifications: navigate.openNotifications,
           }}/>
         ) : tab === 'discover' ? (
           <DiscoverScreen onOpenBar={navigate.openBar}/>
@@ -110,7 +114,7 @@ const App = () => {
         ) : tab === 'groupes' ? (
           <GroupesScreen onOpenGroup={navigate.openGroup} onOpenDM={navigate.openDM} onNew={() => setNewAnnonce(true)} refreshKey={groupsRefreshKey}/>
         ) : session ? (
-          <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar}/>
+          <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar} onOpenNotifications={navigate.openNotifications}/>
         ) : (
           <AuthScreen/>
         )}
@@ -118,6 +122,20 @@ const App = () => {
 
       {/* Event sheet */}
       {eventSheet && <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>}
+
+      {notificationsOpen && (
+        <NotificationsSheet
+          onClose={() => setNotificationsOpen(false)}
+          onOpenAnnonce={(annonce) => {
+            setNotificationsOpen(false)
+            navigate.openAnnonce(annonce)
+          }}
+          onOpenEvent={(event) => {
+            setNotificationsOpen(false)
+            navigate.openEvent(event)
+          }}
+        />
+      )}
 
       {/* Sortie detail sheet (annonces from account) */}
       {sortieSheet && (
@@ -190,17 +208,37 @@ const App = () => {
                   transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
                 }}>
                 {t.id === 'account' ? (
-                  <Avatar
-                    letter={user.avatar}
-                    src={user.avatarUrl}
-                    color={user.color}
-                    size={22}
-                    style={{
-                      outline: tab === 'account' ? '2px solid var(--terracotta)' : '2px solid transparent',
-                      outlineOffset: 1,
-                      transition: 'outline-color 0.2s',
-                    }}
-                  />
+                  <span style={{ position: 'relative' }}>
+                    <Avatar
+                      letter={user.avatar}
+                      src={user.avatarUrl}
+                      color={user.color}
+                      size={22}
+                      style={{
+                        outline: tab === 'account' ? '2px solid var(--terracotta)' : '2px solid transparent',
+                        outlineOffset: 1,
+                        transition: 'outline-color 0.2s',
+                      }}
+                    />
+                    {unreadNotificationCount > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: -5,
+                        right: -7,
+                        minWidth: 15,
+                        height: 15,
+                        padding: '0 4px',
+                        borderRadius: 999,
+                        background: 'var(--terracotta)',
+                        color: '#fff',
+                        border: '2px solid var(--paper)',
+                        fontSize: 8,
+                        fontWeight: 800,
+                        lineHeight: '11px',
+                        textAlign: 'center',
+                      }}>{unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>
+                    )}
+                  </span>
                 ) : (
                   <Icon name={t.icon} size={22} color={tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)'} stroke={tab === t.id ? 2.2 : 1.7}/>
                 )}

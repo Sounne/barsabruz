@@ -268,8 +268,8 @@ const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
 )
 
 // ─────────── ACCOUNT SCREEN ───────────
-const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
-  const { user, bars, annonces, saveProfile, joinedAnnonceIds, myGroups, friends } = useData()
+const AccountScreen = ({ onOpenAnnonce, onOpenBar, onOpenNotifications }) => {
+  const { user, bars, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, unreadNotificationCount, notificationSettings } = useData()
   const { user: authUser } = useAuth()
   const [editing, setEditing] = React.useState(false)
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
@@ -457,21 +457,28 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
       )}
 
       {/* Paramètres */}
-      <Wip>
       <div style={{ padding: '14px 20px 10px' }}>
         <h2 className="serif" style={{ fontSize: 18, margin: '0 0 10px', fontWeight: 600 }}>Paramètres</h2>
         <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
           {[
-            { icon: 'bell', label: 'Notifications', detail: 'Actives' },
+            {
+              icon: 'bell',
+              label: 'Notifications',
+              detail: unreadNotificationCount > 0 ? `${unreadNotificationCount} non lue${unreadNotificationCount > 1 ? 's' : ''}` : (notificationSettings.browser ? 'Alertes actives' : 'Dans l app'),
+              onClick: onOpenNotifications,
+              active: true,
+            },
             { icon: 'heart', label: 'Bars favoris', detail: String(favBars.length) },
             { icon: 'users', label: 'Mes amis', detail: String(friends.length) },
             { icon: 'lock', label: 'Confidentialité', detail: '' },
             { icon: 'globe', label: 'Langue', detail: 'Français' },
           ].map((row, i, arr) => (
-            <div key={row.label} style={{
+            <div key={row.label} onClick={row.onClick} style={{
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '12px 14px',
               borderBottom: i < arr.length - 1 ? '1px solid var(--line)' : 'none',
+              cursor: row.onClick ? 'pointer' : 'default',
+              opacity: row.active || row.onClick ? 1 : 0.5,
             }}>
               <div style={{
                 width: 30, height: 30, borderRadius: 8,
@@ -481,13 +488,16 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar }) => {
                 <Icon name={row.icon} size={15} color="var(--terracotta)"/>
               </div>
               <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{row.label}</div>
-              <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{row.detail}</div>
+              <div style={{
+                fontSize: 12,
+                color: row.active && unreadNotificationCount > 0 ? 'var(--terracotta)' : 'var(--ink-mute)',
+                fontWeight: row.active && unreadNotificationCount > 0 ? 700 : 400,
+              }}>{row.detail}</div>
               <Icon name="chevron" size={14} color="var(--ink-mute)"/>
             </div>
           ))}
         </div>
       </div>
-      </Wip>
 
       <div style={{ padding: '18px 20px' }}>
         <button onClick={handleSignOut} disabled={signingOut} style={{

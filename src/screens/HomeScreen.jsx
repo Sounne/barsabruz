@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip } from '../components/ui'
+import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -382,8 +382,8 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
 }
 
 // ═══════════════ HOME SCREEN ═══════════════
-const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab }) => {
-  const { bars: allBars, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, invitations, acceptInvitation, declineInvitation } = useData()
+const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab, onOpenNotifications }) => {
+  const { bars: allBars, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, invitations, acceptInvitation, declineInvitation, unreadNotificationCount } = useData()
   const { user: authUser } = useAuth()
   const [search, setSearch] = React.useState('')
   const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
@@ -432,20 +432,26 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
             Où allez-vous ce soir ?
           </div>
         </div>
-        <Wip>
-          <div style={{
+        <button onClick={onOpenNotifications} style={{
             width: 42, height: 42, borderRadius: '50%',
             background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow-card)', position: 'relative',
-          }}>
+            border: 'none', cursor: 'pointer',
+          }} aria-label="Ouvrir les notifications">
             <Icon name="bell" size={20} color="var(--ink-soft)"/>
-            <span style={{
-              position: 'absolute', top: 9, right: 10,
-              width: 8, height: 8, borderRadius: '50%', background: 'var(--terracotta)',
-              border: '2px solid #fff',
-            }}/>
-          </div>
-        </Wip>
+            {unreadNotificationCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -4, right: -4,
+                minWidth: 19, height: 19, padding: '0 5px',
+                borderRadius: 999, background: 'var(--terracotta)',
+                color: '#fff', border: '2px solid #fff',
+                fontSize: 10, fontWeight: 800, lineHeight: '15px',
+                textAlign: 'center',
+              }}>
+                {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+              </span>
+            )}
+          </button>
       </div>
 
       {/* Search */}

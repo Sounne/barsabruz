@@ -278,6 +278,18 @@ export function subscribeToAnnonceParticipants(callback) {
     .subscribe()
 }
 
+export function subscribeToAnnonceInvitations(userId, callback) {
+  if (!userId) return null
+  return supabase
+    .channel(`public:annonce_invitations:${userId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'annonce_invitations', filter: `invitee_id=eq.${userId}` },
+      callback
+    )
+    .subscribe()
+}
+
 export function unsubscribeChannel(channel) {
   supabase.removeChannel(channel)
 }

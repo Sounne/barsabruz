@@ -5,6 +5,7 @@ import {
   joinAnnonceUser, unjoinAnnonceUser,
   fetchJoinedAnnonceIds, deleteAnnonce as svcDeleteAnnonce,
   subscribeToAnnonces, unsubscribeChannel,
+  subscribeToAnnonceParticipants, subscribeToAnnonceInvitations,
   fetchAllAnnonceParticipants,
   fetchPendingInvitations,
   acceptAnnonceInvitation, declineAnnonceInvitation,
@@ -26,7 +27,46 @@ export function DataProvider({ children }) {
   const [myGroups, setMyGroups] = React.useState([])
   const [friends, setFriends] = React.useState([])
   const [invitations, setInvitations] = React.useState([])
+  const [notificationReadIds, setNotificationReadIds] = React.useState(new Set())
+  const [notificationDismissedIds, setNotificationDismissedIds] = React.useState(new Set())
+  const [notificationSettings, setNotificationSettings] = React.useState({
+    invitations: true,
+    participants: true,
+    sorties: true,
+    events: true,
+    browser: false,
+  })
+  const [notificationPermission, setNotificationPermission] = React.useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+  )
   const [loading, setLoading] = React.useState(true)
+  const skipNotificationWriteRef = React.useRef(true)
+  const skipNotificationSettingsWriteRef = React.useRef(true)
+
+  const notificationStorageKey = React.useMemo(
+    () => `barsabruz:notifications:${user?.id ?? 'guest'}`,
+    [user?.id]
+  )
+
+  const notificationSettingsKey = React.useMemo(
+    () => `barsabruz:notification-settings:${user?.id ?? 'guest'}`,
+    [user?.id]
+  )
+
+  const readStorage = React.useCallback((key, fallback) => {
+    try {
+      const value = window.localStorage.getItem(key)
+      return value ? JSON.parse(value) : fallback
+    } catch {
+      return fallback
+    }
+  }, [])
+
+  const writeStorage = React.useCallback((key, value) => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value))
+    } catch {}
+  }, [])
 
   const refreshInvitations = React.useCallback(async () => {
     if (!user) { setInvitations([]); return }
@@ -48,6 +88,37 @@ export function DataProvider({ children }) {
       setParticipantsMap(map)
     } catch {}
   }, [])
+
+  React.useEffect(() => {
+    skipNotificationWriteRef.current = true
+    skipNotificationSettingsWriteRef.current = true
+    const state = readStorage(notificationStorageKey, { read: [], dismissed: [] })
+    setNotificationReadIds(new Set(state.read ?? []))
+    setNotificationDismissedIds(new Set(state.dismissed ?? []))
+    setNotificationSettings(prev => ({
+      ...prev,
+      ...readStorage(notificationSettingsKey, {}),
+    }))
+  }, [notificationStorageKey, notificationSettingsKey, readStorage])
+
+  React.useEffect(() => {
+    if (skipNotificationWriteRef.current) {
+      skipNotificationWriteRef.current = false
+      return
+    }
+    writeStorage(notificationStorageKey, {
+      read: [...notificationReadIds],
+      dismissed: [...notificationDismissedIds],
+    })
+  }, [notificationStorageKey, notificationReadIds, notificationDismissedIds, writeStorage])
+
+  React.useEffect(() => {
+    if (skipNotificationSettingsWriteRef.current) {
+      skipNotificationSettingsWriteRef.current = false
+      return
+    }
+    writeStorage(notificationSettingsKey, notificationSettings)
+  }, [notificationSettingsKey, notificationSettings, writeStorage])
 
   // Load bars + annonces once
   React.useEffect(() => {
@@ -77,6 +148,20 @@ export function DataProvider({ children }) {
     load()
     return () => { cancelled = true }
   }, [])
+
+  React.useEffect(() => {
+    let channel
+    try {
+      channel = subscribeToAnnonceParticipants(() => {
+        fetchAnnonces()
+          .then(data => {
+            if (data?.length) loadParticipants(data)
+          })
+          .catch(() => {})
+      })
+    } catch {}
+    return () => { if (channel) unsubscribeChannel(channel) }
+  }, [loadParticipants])
 
   // Real-time subscription to annonces (new sorties, count updates, deletions)
   React.useEffect(() => {
@@ -126,6 +211,15 @@ export function DataProvider({ children }) {
       .catch(() => {})
     refreshInvitations()
   }, [user?.id])
+
+  React.useEffect(() => {
+    if (!user) return
+    let channel
+    try {
+      channel = subscribeToAnnonceInvitations(user.id, refreshInvitations)
+    } catch {}
+    return () => { if (channel) unsubscribeChannel(channel) }
+  }, [user?.id, refreshInvitations])
 
   const saveProfile = React.useCallback(async (updates) => {
     if (!user) return
@@ -248,6 +342,159 @@ export function DataProvider({ children }) {
     await sendAnnonceInvitations(annonceId, user.id, inviteeIds)
   }, [user?.id])
 
+  const notifications = React.useMemo(() => {
+    const items = []
+    const list = annonces ?? ANNONCES_PUBLIC
+    const now = Date.now()
+
+    if (notificationSettings.invitations) {
+      invitations.forEach(inv => {
+        items.push({
+          id: `invitation:${inv.invitationId}`,
+          type: 'invitation',
+          icon: 'users',
+          color: inv.inviter?.color || 'var(--terracotta)',
+          title: `${inv.inviter?.name ?? 'Quelqu\'un'} t'invite`,
+          body: `${inv.annonce.title} - ${inv.annonce.when} chez ${inv.annonce.bar}`,
+          time: 'A traiter',
+          createdAt: inv.createdAt,
+          priority: 4,
+          invitation: inv,
+          annonce: inv.annonce,
+        })
+      })
+    }
+
+    if (user && notificationSettings.participants) {
+      list
+        .filter(a => a.user_id === user.id)
+        .forEach(a => {
+          ;(participantsMap[a.id] ?? [])
+            .filter(p => p.user_id !== user.id)
+            .slice(-4)
+            .forEach(p => {
+              items.push({
+                id: `participant:${a.id}:${p.user_id}`,
+                type: 'participant',
+                icon: 'check',
+                color: p.color || a.color || 'var(--success)',
+                title: `${p.name || 'Un participant'} rejoint ta sortie`,
+                body: a.title,
+                time: 'Nouvelle participation',
+                createdAt: p.joined_at,
+                priority: 3,
+                annonce: a,
+              })
+            })
+        })
+    }
+
+    if (notificationSettings.sorties) {
+      list
+        .filter(a => !user || a.user_id !== user.id)
+        .filter(a => !myJoins.has(a.id))
+        .slice(0, 6)
+        .forEach((a, index) => {
+          items.push({
+            id: `sortie:${a.id}`,
+            type: 'sortie',
+            icon: 'bell',
+            color: a.color || 'var(--terracotta)',
+            title: `${a.author || 'Quelqu\'un'} propose une sortie`,
+            body: `${a.title} - ${a.when} chez ${a.bar}`,
+            time: 'Sortie ouverte',
+            createdAt: a.created_at || new Date(now - (index + 1) * 60000).toISOString(),
+            priority: 2,
+            annonce: a,
+          })
+        })
+    }
+
+    if (notificationSettings.events) {
+      ;(bars ?? BARS_DATA)
+        .flatMap(bar => (bar.events ?? []).map(event => ({ ...event, bar })))
+        .slice(0, 5)
+        .forEach((event, index) => {
+          items.push({
+            id: `event:${event.id}`,
+            type: 'event',
+            icon: 'calendar',
+            color: event.bar.color,
+            title: event.title,
+            body: `${event.date} - ${event.time} chez ${event.bar.name}`,
+            time: 'Evenement a venir',
+            createdAt: new Date(now - (index + 8) * 60000).toISOString(),
+            priority: 1,
+            event,
+          })
+        })
+    }
+
+    return items
+      .filter(n => !notificationDismissedIds.has(n.id))
+      .map(n => ({ ...n, read: notificationReadIds.has(n.id) }))
+      .sort((a, b) => {
+        if (a.read !== b.read) return a.read ? 1 : -1
+        if (a.priority !== b.priority) return b.priority - a.priority
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      })
+  }, [
+    annonces,
+    bars,
+    invitations,
+    myJoins,
+    notificationDismissedIds,
+    notificationReadIds,
+    notificationSettings,
+    participantsMap,
+    user?.id,
+  ])
+
+  const unreadNotificationCount = React.useMemo(
+    () => notifications.filter(n => !n.read).length,
+    [notifications]
+  )
+
+  React.useEffect(() => {
+    if (!notificationSettings.browser || notificationPermission !== 'granted') return
+    const latest = notifications.find(n => !n.read && ['invitation', 'participant'].includes(n.type))
+    if (!latest) return
+    const key = `barsabruz:last-browser-notification:${user?.id ?? 'guest'}`
+    if (readStorage(key, null) === latest.id) return
+    try {
+      new Notification(latest.title, { body: latest.body })
+      writeStorage(key, latest.id)
+    } catch {}
+  }, [notificationPermission, notificationSettings.browser, notifications, readStorage, user?.id, writeStorage])
+
+  const markNotificationRead = React.useCallback((id) => {
+    setNotificationReadIds(prev => new Set([...prev, id]))
+  }, [])
+
+  const markAllNotificationsRead = React.useCallback(() => {
+    setNotificationReadIds(prev => new Set([...prev, ...notifications.map(n => n.id)]))
+  }, [notifications])
+
+  const dismissNotification = React.useCallback((id) => {
+    setNotificationReadIds(prev => new Set([...prev, id]))
+    setNotificationDismissedIds(prev => new Set([...prev, id]))
+  }, [])
+
+  const updateNotificationSetting = React.useCallback((key, value) => {
+    setNotificationSettings(prev => ({ ...prev, [key]: value }))
+  }, [])
+
+  const requestBrowserNotifications = React.useCallback(async () => {
+    if (typeof Notification === 'undefined') {
+      setNotificationPermission('unsupported')
+      return 'unsupported'
+    }
+    const permission = await Notification.requestPermission()
+    setNotificationPermission(permission)
+    setNotificationSettings(prev => ({ ...prev, browser: permission === 'granted' }))
+    return permission
+  }, [])
+
   const value = {
     bars: bars ?? BARS_DATA,
     annonces: annonces ?? ANNONCES_PUBLIC,
@@ -263,6 +510,15 @@ export function DataProvider({ children }) {
     myGroups,
     friends,
     invitations,
+    notifications,
+    unreadNotificationCount,
+    notificationSettings,
+    notificationPermission,
+    markNotificationRead,
+    markAllNotificationsRead,
+    dismissNotification,
+    updateNotificationSetting,
+    requestBrowserNotifications,
     acceptInvitation,
     declineInvitation,
     inviteFriendsToAnnonce,
