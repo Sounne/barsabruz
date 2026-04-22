@@ -835,144 +835,383 @@ const DiscoverScreen = ({ onOpenBar }) => {
 
 // ═══════════════ MAP VIEW ═══════════════
 const BAR_ICONS = { ostal: 'wine', pignom: 'beer', 'arriere-cour': 'cocktail' };
-const PIN_POSITIONS = [{ x: 145, y: 210 }, { x: 230, y: 160 }, { x: 280, y: 260 }];
+const BAR_COORDINATES = {
+  ostal: { lat: 48.0240253, lng: -1.7473235 },
+  pignom: { lat: 48.0290344, lng: -1.7619397 },
+  'arriere-cour': { lat: 48.0217208, lng: -1.7501470 },
+};
+const TILE_SIZE = 256;
+const DEFAULT_ZOOM = 15;
+const MIN_ZOOM = 14;
+const MAX_ZOOM = 18;
+const BRUZ_CENTER = { lat: 48.0249, lng: -1.7531 };
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+const getCoordinates = bar => {
+  const coords = bar.coordinates ?? BAR_COORDINATES[bar.id];
+  if (!coords) return null;
+  const lat = Number(coords.lat);
+  const lng = Number(coords.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+};
+const lngToTileX = (lng, zoom) => ((lng + 180) / 360) * TILE_SIZE * (2 ** zoom);
+const latToTileY = (lat, zoom) => {
+  const rad = (lat * Math.PI) / 180;
+  return ((1 - Math.log(Math.tan(rad) + (1 / Math.cos(rad))) / Math.PI) / 2) * TILE_SIZE * (2 ** zoom);
+};
+const tileXToLng = (x, zoom) => (x / (TILE_SIZE * (2 ** zoom))) * 360 - 180;
+const tileYToLat = (y, zoom) => {
+  const n = Math.PI - (2 * Math.PI * y) / (TILE_SIZE * (2 ** zoom));
+  return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+};
+const project = (coords, zoom) => ({ x: lngToTileX(coords.lng, zoom), y: latToTileY(coords.lat, zoom) });
+const unproject = (point, zoom) => ({ lat: tileYToLat(point.y, zoom), lng: tileXToLng(point.x, zoom) });
+const getMapCenter = bars => {
+  const points = bars.map(getCoordinates).filter(Boolean);
+  if (!points.length) return BRUZ_CENTER;
+  const sum = points.reduce((acc, p) => ({ lat: acc.lat + p.lat, lng: acc.lng + p.lng }), { lat: 0, lng: 0 });
+  return { lat: sum.lat / points.length, lng: sum.lng / points.length };
+};
 
 const MapView = ({ bars, onOpenBar }) => {
   const [selected, setSelected] = React.useState(null);
+  const [view, setView] = React.useState(() => ({ center: getMapCenter(bars), zoom: DEFAULT_ZOOM }));
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+  const mapRef = React.useRef(null);
+  const dragRef = React.useRef(null);
   const now = useCurrentTime();
   const barStatus = bar => getBarStatus(bar, now);
   const sel = bars.find(b => b.id === selected);
+  const mapHeight = sel ? 460 : 420;
+
+  React.useEffect(() => {
+    if (!mapRef.current) return;
+    const updateSize = () => {
+      const rect = mapRef.current.getBoundingClientRect();
+      setSize({ width: rect.width, height: rect.height });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(mapRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    setView({ center: getMapCenter(bars), zoom: DEFAULT_ZOOM });
+  }, [bars]);
 
   const openMaps = (bar, e) => {
     e.stopPropagation();
     window.open(bar.mapsUrl, '_blank', 'noopener');
   };
 
-  return (
-    <div style={{ padding: '0 20px' }} onClick={() => setSelected(null)}>
-      <div style={{
-        position: 'relative', borderRadius: 18, overflow: 'hidden',
-        height: sel ? 460 : 420, background: '#E8DFCE',
-        boxShadow: 'var(--shadow-card)',
-        transition: 'height 0.25s ease',
-      }}>
-        {/* Stylized map */}
-        <svg viewBox="0 0 400 420" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-          <defs>
-            <pattern id="mapgrid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M40 0 L0 0 0 40" fill="none" stroke="rgba(42,31,23,0.05)" strokeWidth="1"/>
-            </pattern>
-          </defs>
-          <rect width="400" height="420" fill="#F0E6D2"/>
-          <rect width="400" height="420" fill="url(#mapgrid)"/>
-          <path d="M0,180 Q100,160 200,200 T400,220" stroke="#D9CDB5" strokeWidth="22" fill="none"/>
-          <path d="M0,180 Q100,160 200,200 T400,220" stroke="#F5ECD8" strokeWidth="18" fill="none"/>
-          <path d="M180,0 Q200,200 160,420" stroke="#D9CDB5" strokeWidth="16" fill="none"/>
-          <path d="M180,0 Q200,200 160,420" stroke="#F5ECD8" strokeWidth="12" fill="none"/>
-          <path d="M0,340 L400,320" stroke="#D9CDB5" strokeWidth="12" fill="none"/>
-          <path d="M0,340 L400,320" stroke="#F5ECD8" strokeWidth="9" fill="none"/>
-          <ellipse cx="90" cy="100" rx="60" ry="45" fill="#CDD9B5" opacity="0.7"/>
-          <ellipse cx="320" cy="370" rx="70" ry="40" fill="#CDD9B5" opacity="0.7"/>
-          {[[50,250,30,20],[100,270,40,30],[250,80,30,25],[280,150,40,35],[60,380,50,30]].map(([x,y,w,h],i) =>
-            <rect key={i} x={x} y={y} width={w} height={h} fill="#E5D8BC" opacity="0.8" rx="2"/>)}
-        </svg>
+  const resetView = e => {
+    e.stopPropagation();
+    setSelected(null);
+    setView({ center: getMapCenter(bars), zoom: DEFAULT_ZOOM });
+  };
 
-        {/* Pins */}
-        {bars.map((bar, i) => {
-          const p = PIN_POSITIONS[i];
+  const zoomMap = (delta, e) => {
+    e.stopPropagation();
+    setView(prev => ({ ...prev, zoom: clamp(prev.zoom + delta, MIN_ZOOM, MAX_ZOOM) }));
+  };
+
+  const handlePointerDown = e => {
+    dragRef.current = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      moved: false,
+      centerPoint: project(view.center, view.zoom),
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = e => {
+    const drag = dragRef.current;
+    if (!drag || drag.id !== e.pointerId) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    setView(prev => ({
+      ...prev,
+      center: unproject({ x: drag.centerPoint.x - dx, y: drag.centerPoint.y - dy }, prev.zoom),
+    }));
+  };
+
+  const handlePointerUp = e => {
+    if (dragRef.current?.id === e.pointerId) dragRef.current = null;
+  };
+
+  const handleWheel = e => {
+    e.preventDefault();
+    setView(prev => ({ ...prev, zoom: clamp(prev.zoom + (e.deltaY > 0 ? -1 : 1), MIN_ZOOM, MAX_ZOOM) }));
+  };
+
+  const centerPoint = project(view.center, view.zoom);
+  const topLeft = {
+    x: centerPoint.x - (size.width || 0) / 2,
+    y: centerPoint.y - (size.height || mapHeight) / 2,
+  };
+  const tileCount = 2 ** view.zoom;
+  const tiles = [];
+  const firstTileX = Math.floor(topLeft.x / TILE_SIZE) - 1;
+  const lastTileX = Math.floor((topLeft.x + (size.width || 0)) / TILE_SIZE) + 1;
+  const firstTileY = Math.max(0, Math.floor(topLeft.y / TILE_SIZE) - 1);
+  const lastTileY = Math.min(tileCount - 1, Math.floor((topLeft.y + (size.height || mapHeight)) / TILE_SIZE) + 1);
+  for (let x = firstTileX; x <= lastTileX; x++) {
+    for (let y = firstTileY; y <= lastTileY; y++) {
+      const wrappedX = ((x % tileCount) + tileCount) % tileCount;
+      tiles.push({ x, y, wrappedX });
+    }
+  }
+
+  return (
+    <div style={{ padding: '0 20px' }}>
+      <div
+        ref={mapRef}
+        onClick={() => setSelected(null)}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onWheel={handleWheel}
+        style={{
+          position: 'relative',
+          borderRadius: 18,
+          overflow: 'hidden',
+          height: mapHeight,
+          background: '#E8DFCE',
+          boxShadow: 'var(--shadow-card)',
+          transition: 'height 0.25s ease',
+          touchAction: 'none',
+          cursor: dragRef.current ? 'grabbing' : 'grab',
+        }}
+      >
+        {tiles.map(tile => (
+          <img
+            key={`${tile.x}-${tile.y}`}
+            src={`https://tile.openstreetmap.org/${view.zoom}/${tile.wrappedX}/${tile.y}.png`}
+            alt=""
+            draggable={false}
+            style={{
+              position: 'absolute',
+              left: tile.x * TILE_SIZE - topLeft.x,
+              top: tile.y * TILE_SIZE - topLeft.y,
+              width: TILE_SIZE,
+              height: TILE_SIZE,
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+        ))}
+
+        {bars.map(bar => {
+          const coords = getCoordinates(bar);
+          if (!coords) return null;
+          const point = project(coords, view.zoom);
+          const p = { x: point.x - topLeft.x, y: point.y - topLeft.y };
           const isSel = selected === bar.id;
           const status = barStatus(bar);
+          const bubbleWidth = Math.min(216, Math.max(180, (size.width || 260) - 24));
+          const bubbleLeft = clamp(p.x - bubbleWidth / 2, 10, Math.max(10, (size.width || 260) - bubbleWidth - 10));
+          const bubbleAbove = p.y > 118;
+          const bubbleTop = bubbleAbove ? p.y - 116 : p.y + 18;
+          const pointerLeft = clamp(p.x - bubbleLeft, 14, bubbleWidth - 14);
+
           return (
-            <div key={bar.id}
-              onClick={e => { e.stopPropagation(); setSelected(isSel ? null : bar.id); }}
-              style={{
-                position: 'absolute',
-                left: `${(p.x / 400) * 100}%`,
-                top: `${(p.y / 420) * 100}%`,
-                transform: `translate(-50%, -100%) scale(${isSel ? 1.12 : 1})`,
-                transition: 'transform 0.2s',
-                cursor: 'pointer',
-                zIndex: isSel ? 20 : 5,
-              }}>
-              {/* Info bubble — shown when selected */}
+            <React.Fragment key={bar.id}>
               {isSel && (
-                <div onClick={e => openMaps(bar, e)} style={{
-                  position: 'absolute', bottom: 'calc(100% + 6px)',
-                  left: '50%', transform: 'translateX(-50%)',
-                  background: '#fff', borderRadius: 12, padding: '10px 12px',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                  whiteSpace: 'nowrap', minWidth: 180,
-                  cursor: 'pointer',
-                }}>
+                <div
+                  onClick={e => openMaps(bar, e)}
+                  style={{
+                    position: 'absolute',
+                    left: bubbleLeft,
+                    top: bubbleTop,
+                    width: bubbleWidth,
+                    background: '#fff',
+                    borderRadius: 12,
+                    padding: '10px 12px',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    zIndex: 30,
+                  }}
+                >
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 3 }}>
                     {bar.name}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--ink-mute)', marginBottom: 7 }}>
                     <span style={{
-                      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      flexShrink: 0,
                       background: status.openNow ? 'var(--success)' : 'var(--ink-mute)',
                     }}/>
                     {status.openNow ? `Ouvert · ferme à ${status.closesAt}` : `Fermé · ${status.opensIn}`}
                   </div>
                   <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                    background: bar.color, color: '#fff',
-                    borderRadius: 8, padding: '5px 10px',
-                    fontSize: 11, fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 5,
+                    background: bar.color,
+                    color: '#fff',
+                    borderRadius: 8,
+                    padding: '5px 10px',
+                    fontSize: 11,
+                    fontWeight: 600,
                   }}>
                     <Icon name="pin" size={11} color="#fff"/>
                     Ouvrir dans Maps
                   </div>
-                  {/* Pointer */}
                   <div style={{
-                    position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
-                    width: 0, height: 0,
-                    borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+                    position: 'absolute',
+                    [bubbleAbove ? 'bottom' : 'top']: -6,
+                    left: pointerLeft,
+                    transform: bubbleAbove ? 'translateX(-50%)' : 'translateX(-50%) rotate(180deg)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '6px solid transparent',
+                    borderRight: '6px solid transparent',
                     borderTop: '6px solid #fff',
                     filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.08))',
                   }}/>
                 </div>
               )}
 
-              {/* Pin */}
-              <div style={{
-                background: bar.color, color: '#fff',
-                padding: '7px 11px', borderRadius: 999,
-                fontSize: 13, fontWeight: 600,
-                boxShadow: isSel ? `0 4px 16px ${bar.color}66` : '0 3px 10px rgba(0,0,0,0.18)',
-                whiteSpace: 'nowrap',
-                display: 'flex', alignItems: 'center', gap: 6,
-                border: isSel ? '2px solid #fff' : '2px solid transparent',
-                transition: 'box-shadow 0.2s, border 0.2s',
-              }}>
-                <Icon name={BAR_ICONS[bar.id]} size={13} color="#fff"/>
-                {bar.name}
+              <div
+                onClick={e => {
+                  e.stopPropagation();
+                  setSelected(isSel ? null : bar.id);
+                }}
+                style={{
+                  position: 'absolute',
+                  left: p.x,
+                  top: p.y,
+                  transform: `translate(-50%, -100%) scale(${isSel ? 1.08 : 1})`,
+                  transition: 'transform 0.2s',
+                  cursor: 'pointer',
+                  zIndex: isSel ? 25 : 10,
+                }}
+              >
+                <div style={{
+                  background: bar.color,
+                  color: '#fff',
+                  padding: '7px 11px',
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  boxShadow: isSel ? `0 4px 16px ${bar.color}66` : '0 3px 10px rgba(0,0,0,0.18)',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  border: isSel ? '2px solid #fff' : '2px solid transparent',
+                  transition: 'box-shadow 0.2s, border 0.2s',
+                }}>
+                  <Icon name={BAR_ICONS[bar.id]} size={13} color="#fff"/>
+                  {bar.name}
+                </div>
+                <div style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: '5px solid transparent',
+                  borderRight: '5px solid transparent',
+                  borderTop: `7px solid ${bar.color}`,
+                  margin: '0 auto',
+                }}/>
               </div>
-              <div style={{
-                width: 0, height: 0,
-                borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
-                borderTop: `7px solid ${bar.color}`,
-                margin: '0 auto',
-              }}/>
-            </div>
+            </React.Fragment>
           );
         })}
 
-        {/* Bottom card for selected bar */}
+        <div style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          zIndex: 35,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}>
+          <button onClick={e => zoomMap(1, e)} style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            border: '1px solid rgba(42,31,23,0.12)',
+            background: 'rgba(255,255,255,0.94)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            fontSize: 18,
+            fontWeight: 700,
+            color: 'var(--ink)',
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+          }}>+</button>
+          <button onClick={e => zoomMap(-1, e)} style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            border: '1px solid rgba(42,31,23,0.12)',
+            background: 'rgba(255,255,255,0.94)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            fontSize: 18,
+            fontWeight: 700,
+            color: 'var(--ink)',
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+          }}>-</button>
+          <button onClick={resetView} style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            border: '1px solid rgba(42,31,23,0.12)',
+            background: 'rgba(255,255,255,0.94)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            color: 'var(--ink)',
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Icon name="map" size={15}/>
+          </button>
+        </div>
+
         {sel && (
           <div
-            onClick={e => { e.stopPropagation(); onOpenBar(sel.id); }}
+            onClick={e => {
+              e.stopPropagation();
+              onOpenBar(sel.id);
+            }}
             style={{
-              position: 'absolute', bottom: 12, left: 12, right: 12,
-              background: '#fff', borderRadius: 14, padding: 12,
-              display: 'flex', gap: 12, alignItems: 'center',
-              boxShadow: 'var(--shadow-float)', cursor: 'pointer',
+              position: 'absolute',
+              bottom: 12,
+              left: 12,
+              right: 12,
+              background: '#fff',
+              borderRadius: 14,
+              padding: 12,
+              display: 'flex',
+              gap: 12,
+              alignItems: 'center',
+              boxShadow: 'var(--shadow-float)',
+              cursor: 'pointer',
               animation: 'fadeUp 0.2s ease',
-            }}>
+              zIndex: 32,
+            }}
+          >
             <div style={{
-              width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              flexShrink: 0,
               background: `linear-gradient(135deg, ${sel.color}, ${sel.accent})`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}>
               <Icon name={BAR_ICONS[sel.id]} size={20} color="#fff"/>
             </div>
@@ -982,20 +1221,44 @@ const MapView = ({ bars, onOpenBar }) => {
                 {sel.address}
               </div>
             </div>
-            <div style={{
-              background: sel.color, color: '#fff',
-              padding: '6px 10px', borderRadius: 8,
-              fontSize: 11, fontWeight: 600, flexShrink: 0,
-              display: 'flex', alignItems: 'center', gap: 4,
+            <button onClick={e => openMaps(sel, e)} style={{
+              background: sel.color,
+              color: '#fff',
+              padding: '6px 10px',
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 600,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              border: 'none',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
             }}>
               <Icon name="pin" size={11} color="#fff"/>
               Maps
-            </div>
+            </button>
           </div>
         )}
+
+        <div style={{
+          position: 'absolute',
+          left: 8,
+          bottom: sel ? 84 : 8,
+          zIndex: 8,
+          fontSize: 9,
+          color: 'rgba(42,31,23,0.65)',
+          background: 'rgba(255,255,255,0.8)',
+          borderRadius: 6,
+          padding: '3px 5px',
+          pointerEvents: 'none',
+        }}>
+          © OpenStreetMap
+        </div>
       </div>
       <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11, color: 'var(--ink-mute)' }}>
-        Appuyez sur un marqueur pour ouvrir dans Maps
+        Déplacez la carte, zoomez, puis appuyez sur un marqueur.
       </div>
     </div>
   );

@@ -11,6 +11,12 @@ const BAR_IMAGES = {
   'arriere-cour': arriereCourtImg,
 }
 
+const BAR_COORDINATES = {
+  ostal: { lat: 48.0240253, lng: -1.7473235 },
+  pignom: { lat: 48.0290344, lng: -1.7619397 },
+  'arriere-cour': { lat: 48.0217208, lng: -1.7501470 },
+}
+
 // ─────────── BARS ───────────
 
 export async function fetchBars() {
@@ -26,6 +32,7 @@ export async function fetchBars() {
     ...bar,
     mapsUrl: bar.mapsurl,
     priceLevel: bar.pricelevel,
+    coordinates: BAR_COORDINATES[bar.id],
     image: BAR_IMAGES[bar.id] ?? null,
     events: (events ?? []).filter(e => e.bar_id === bar.id),
   }))
