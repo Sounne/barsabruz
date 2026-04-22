@@ -845,6 +845,10 @@ const DEFAULT_ZOOM = 15;
 const MIN_ZOOM = 14;
 const MAX_ZOOM = 18;
 const BRUZ_CENTER = { lat: 48.0249, lng: -1.7531 };
+const MAP_FIT_FALLBACK_SIZE = { width: 360, height: 420 };
+const MARKER_LABEL_PAD_X = 108;
+const MAP_FIT_PAD_Y = 72;
+const TABBAR_CLEARANCE = 92;
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const getCoordinates = bar => {
@@ -866,16 +870,42 @@ const tileYToLat = (y, zoom) => {
 };
 const project = (coords, zoom) => ({ x: lngToTileX(coords.lng, zoom), y: latToTileY(coords.lat, zoom) });
 const unproject = (point, zoom) => ({ lat: tileYToLat(point.y, zoom), lng: tileXToLng(point.x, zoom) });
-const getMapCenter = bars => {
-  const points = bars.map(getCoordinates).filter(Boolean);
-  if (!points.length) return BRUZ_CENTER;
-  const sum = points.reduce((acc, p) => ({ lat: acc.lat + p.lat, lng: acc.lng + p.lng }), { lat: 0, lng: 0 });
-  return { lat: sum.lat / points.length, lng: sum.lng / points.length };
+const getMapPoints = bars => bars.map(getCoordinates).filter(Boolean);
+const getFittedMapView = (bars, size = MAP_FIT_FALLBACK_SIZE) => {
+  const points = getMapPoints(bars);
+  if (points.length < 2) return { center: points[0] ?? BRUZ_CENTER, zoom: DEFAULT_ZOOM };
+
+  const width = size.width || MAP_FIT_FALLBACK_SIZE.width;
+  const height = size.height || MAP_FIT_FALLBACK_SIZE.height;
+  const availableWidth = Math.max(120, width - MARKER_LABEL_PAD_X * 2);
+  const availableHeight = Math.max(120, height - MAP_FIT_PAD_Y * 2);
+  let zoom = MIN_ZOOM;
+
+  for (let z = MAX_ZOOM; z >= MIN_ZOOM; z--) {
+    const projected = points.map(p => project(p, z));
+    const xs = projected.map(p => p.x);
+    const ys = projected.map(p => p.y);
+    if ((Math.max(...xs) - Math.min(...xs)) <= availableWidth && (Math.max(...ys) - Math.min(...ys)) <= availableHeight) {
+      zoom = z;
+      break;
+    }
+  }
+
+  const fitted = points.map(p => project(p, zoom));
+  const xs = fitted.map(p => p.x);
+  const ys = fitted.map(p => p.y);
+  return {
+    center: unproject({
+      x: (Math.min(...xs) + Math.max(...xs)) / 2,
+      y: (Math.min(...ys) + Math.max(...ys)) / 2,
+    }, zoom),
+    zoom,
+  };
 };
 
 const MapView = ({ bars, onOpenBar }) => {
   const [selected, setSelected] = React.useState(null);
-  const [view, setView] = React.useState(() => ({ center: getMapCenter(bars), zoom: DEFAULT_ZOOM }));
+  const [view, setView] = React.useState(() => getFittedMapView(bars));
   const [size, setSize] = React.useState({ width: 0, height: 0 });
   const mapRef = React.useRef(null);
   const dragRef = React.useRef(null);
@@ -897,8 +927,8 @@ const MapView = ({ bars, onOpenBar }) => {
   }, []);
 
   React.useEffect(() => {
-    setView({ center: getMapCenter(bars), zoom: DEFAULT_ZOOM });
-  }, [bars]);
+    setView(getFittedMapView(bars, size));
+  }, [bars, size.width, size.height]);
 
   const openMaps = (bar, e) => {
     e.stopPropagation();
@@ -908,7 +938,7 @@ const MapView = ({ bars, onOpenBar }) => {
   const resetView = e => {
     e.stopPropagation();
     setSelected(null);
-    setView({ center: getMapCenter(bars), zoom: DEFAULT_ZOOM });
+    setView(getFittedMapView(bars, size));
   };
 
   const zoomMap = (delta, e) => {
@@ -1188,7 +1218,7 @@ const MapView = ({ bars, onOpenBar }) => {
             }}
             style={{
               position: 'absolute',
-              bottom: 12,
+              bottom: TABBAR_CLEARANCE,
               left: 12,
               right: 12,
               background: '#fff',
@@ -1245,7 +1275,7 @@ const MapView = ({ bars, onOpenBar }) => {
         <div style={{
           position: 'absolute',
           left: 8,
-          bottom: sel ? 84 : 8,
+          bottom: sel ? TABBAR_CLEARANCE + 72 : 8,
           zIndex: 8,
           fontSize: 9,
           color: 'rgba(42,31,23,0.65)',
