@@ -17,6 +17,10 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
   ];
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [hoursOpen, setHoursOpen] = React.useState(false);
+  const openMaps = () => {
+    const mapsUrl = bar.mapsUrl || `https://maps.google.com/?q=${encodeURIComponent(bar.address)}`;
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div style={{ paddingBottom: 100 }}>
@@ -75,7 +79,7 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
 
       {/* Quick actions */}
       <div style={{ padding: '18px 16px 8px', display: 'flex', gap: 10 }}>
-        <button onClick={() => window.open('https://maps.google.com/?q=' + encodeURIComponent(bar.address), '_blank')} style={{
+        <button onClick={openMaps} style={{
           flex: 1, background: bar.color, color: '#fff', border: 'none',
           padding: '13px', borderRadius: 14, fontWeight: 600, fontSize: 14,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -136,14 +140,15 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
           background: '#fff', borderRadius: 16,
           boxShadow: 'var(--shadow-card)', overflow: 'hidden',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, borderBottom: '1px solid var(--line)' }}>
+          <button onClick={openMaps} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: 14, border: 'none', borderBottom: '1px solid var(--line)', background: 'transparent', color: 'inherit', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}>
             <Icon name="pin" size={18} color={bar.color}/>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Adresse</div>
               <div style={{ fontSize: 14, marginTop: 2 }}>{bar.address}</div>
               <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>À {bar.distance}</div>
             </div>
-          </div>
+            <Icon name="chevron" size={14} color="var(--ink-mute)"/>
+          </button>
           {bar.phone && (
             <a href={`tel:${bar.phone}`} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: 14,
