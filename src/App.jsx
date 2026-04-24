@@ -213,17 +213,38 @@ const App = () => {
                 }}>
                 {t.id === 'account' ? (
                   <span style={{ position: 'relative' }}>
-                    <Avatar
-                      letter={user.avatar}
-                      src={user.avatarUrl}
-                      color={user.color}
-                      size={22}
-                      style={{
-                        outline: tab === 'account' ? '2px solid var(--terracotta)' : '2px solid transparent',
-                        outlineOffset: 1,
-                        transition: 'outline-color 0.2s',
-                      }}
-                    />
+                    {isLoggedIn ? (
+                      <Avatar
+                        letter={user.avatar}
+                        src={user.avatarUrl}
+                        color={user.color}
+                        size={22}
+                        style={{
+                          outline: tab === 'account' ? '2px solid var(--terracotta)' : '2px solid transparent',
+                          outlineOffset: 1,
+                          transition: 'outline-color 0.2s',
+                        }}
+                      />
+                    ) : (
+                      <span style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: tab === 'account' ? 'rgba(198,93,61,0.14)' : 'rgba(42,31,23,0.08)',
+                        border: tab === 'account' ? '1.5px solid rgba(198,93,61,0.34)' : '1.5px solid rgba(42,31,23,0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background 0.2s, border-color 0.2s',
+                      }}>
+                        <Icon
+                          name="user"
+                          size={13}
+                          color={tab === 'account' ? 'var(--terracotta)' : 'var(--ink-mute)'}
+                          stroke={2}
+                        />
+                      </span>
+                    )}
                     {isLoggedIn && unreadNotificationCount > 0 && (
                       <span style={{
                         position: 'absolute',
