@@ -16,9 +16,11 @@ const EVENT_ICONS = {
 const AgendaScreen = ({ onOpenEvent }) => {
   const { agendaEvents, agendaTags } = useData()
   const [filter, setFilter] = React.useState('all')
+
   const filteredEvents = filter === 'all'
     ? agendaEvents
     : agendaEvents.filter(event => event.tag === filter)
+
   const byDate = groupEventsByDate(filteredEvents)
 
   return (
@@ -137,28 +139,57 @@ const AgendaScreen = ({ onOpenEvent }) => {
   )
 }
 
+function buildParticipantSummary(participants, attendingCount) {
+  if (!participants.length) {
+    return attendingCount > 0
+      ? `${attendingCount} personnes suivent déjà cette soirée`
+      : 'Sois la première personne à suivre cette soirée'
+  }
+
+  const names = participants
+    .map(person => person.name?.split(' ')?.[0])
+    .filter(Boolean)
+
+  const remaining = Math.max(0, attendingCount - participants.length)
+  return `${names.join(', ')}${remaining > 0 ? `, +${remaining} autres` : ''}`
+}
+
 const EventSheet = ({ event, onClose }) => {
-  const { user } = useAuth()
-  const [attending, setAttending] = React.useState(false)
+  const { session } = useAuth()
+  const {
+    agendaEvents,
+    eventParticipantsMap,
+    joinedEventIds,
+    joinEvent,
+    unjoinEvent,
+  } = useData()
   const [shareLabel, setShareLabel] = React.useState('Partager à un groupe')
-  const attendeePreview = [
-    { id: 'sarah', name: 'Sarah', avatar: 'S', color: '#C8B7A6' },
-    { id: 'clement', name: 'Clément', avatar: 'C', color: '#B8B2AA' },
-    { id: 'lea', name: 'Léa', avatar: 'L', color: '#D8D1C8' },
-    { id: 'nassim', name: 'Nassim', avatar: 'N', color: '#CDC3B5' },
-    { id: 'rose', name: 'Rose', avatar: 'R', color: '#D7CEC0' },
-  ]
+
+  const currentEvent = agendaEvents.find(item => item.id === event?.id) ?? event
+  const participants = (eventParticipantsMap[currentEvent?.id] ?? []).slice().sort((a, b) => (
+    new Date(a.joined_at || 0) - new Date(b.joined_at || 0)
+  ))
+  const attendeePreview = participants.slice(0, 5)
+  const attending = joinedEventIds.has(currentEvent?.id)
+  const canParticipate = !!session?.user
+  const attendingCount = currentEvent?.attending ?? 0
+  const participantSummary = buildParticipantSummary(attendeePreview, attendingCount)
 
   const handleToggleAttending = () => {
-    setAttending(value => !value)
+    if (!currentEvent || !canParticipate) return
+    if (attending) {
+      unjoinEvent(currentEvent.id)
+      return
+    }
+    joinEvent(currentEvent.id)
   }
 
   const handleShare = async () => {
-    const message = `${event.title} · ${event.date} à ${event.time} chez ${event.bar.name}`
+    const message = `${currentEvent.title} · ${currentEvent.date} à ${currentEvent.time} chez ${currentEvent.bar.name}`
     try {
       if (navigator.share) {
         await navigator.share({
-          title: event.title,
+          title: currentEvent.title,
           text: message,
         })
         setShareLabel('Partagé')
@@ -171,12 +202,13 @@ const EventSheet = ({ event, onClose }) => {
     } catch {
       setShareLabel('Partager à un groupe')
     }
+
     window.setTimeout(() => {
       setShareLabel('Partager à un groupe')
     }, 1800)
   }
 
-  if (!event) return null
+  if (!currentEvent) return null
 
   return (
     <div
@@ -204,7 +236,7 @@ const EventSheet = ({ event, onClose }) => {
         }}
       >
         <div style={{ height: 260, position: 'relative' }}>
-          <BarHero bar={event.bar} height={260} />
+          <BarHero bar={currentEvent.bar} height={260} />
           <button
             onClick={onClose}
             style={{
@@ -235,26 +267,27 @@ const EventSheet = ({ event, onClose }) => {
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
-            color: event.bar.color,
+            color: currentEvent.bar.color,
             boxShadow: 'var(--shadow-float)',
           }}>
-            {String(event.tag).toUpperCase()}
+            {String(currentEvent.tag).toUpperCase()}
           </div>
         </div>
 
         <div style={{ padding: '20px 20px 28px' }}>
           <div style={{ fontSize: 12, color: 'var(--ink-mute)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {event.date} · {event.time}
+            {currentEvent.date} · {currentEvent.time}
           </div>
           <div className="serif" style={{ fontSize: 24, fontWeight: 600, marginTop: 6, lineHeight: 1.2 }}>
-            {event.title}
+            {currentEvent.title}
           </div>
           <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 4 }}>
-            À <b>{event.bar.name}</b> · {event.bar.address}
+            À <b>{currentEvent.bar.name}</b> · {currentEvent.bar.address}
           </div>
           <div style={{ fontSize: 14, color: 'var(--ink-soft)', marginTop: 14, lineHeight: 1.55 }}>
-            {event.description ?? `Retrouve l'ambiance ${String(event.tag).toLowerCase()} de ${event.bar.name} et rejoins la communauté pour une soirée à ${event.time}.`}
+            {currentEvent.description || `Retrouve l'ambiance ${String(currentEvent.tag).toLowerCase()} de ${currentEvent.bar.name} et rejoins la communauté pour une soirée à ${currentEvent.time}.`}
           </div>
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
@@ -263,11 +296,11 @@ const EventSheet = ({ event, onClose }) => {
           }}>
             <div style={{ background: '#fff', padding: 14, borderRadius: 14, boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Prix</div>
-              <div className="serif" style={{ fontSize: 22, fontWeight: 600, marginTop: 4 }}>{event.price}</div>
+              <div className="serif" style={{ fontSize: 22, fontWeight: 600, marginTop: 4 }}>{currentEvent.price}</div>
             </div>
             <div style={{ background: '#fff', padding: 14, borderRadius: 14, boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Intéressés</div>
-              <div className="serif" style={{ fontSize: 22, fontWeight: 600, marginTop: 4 }}>{event.attending + (attending ? 1 : 0)}</div>
+              <div className="serif" style={{ fontSize: 22, fontWeight: 600, marginTop: 4 }}>{attendingCount}</div>
             </div>
           </div>
 
@@ -275,9 +308,10 @@ const EventSheet = ({ event, onClose }) => {
             <div style={{ display: 'flex' }}>
               {attendeePreview.map((person, index) => (
                 <Avatar
-                  key={person.id}
-                  letter={person.avatar}
-                  color={person.color}
+                  key={`${person.user_id}-${index}`}
+                  letter={person.avatar_letter ?? person.name?.[0] ?? '?'}
+                  src={person.avatar_url}
+                  color={person.color ?? '#CDC3B5'}
                   size={30}
                   style={{
                     border: '2px solid var(--paper)',
@@ -288,7 +322,7 @@ const EventSheet = ({ event, onClose }) => {
               ))}
             </div>
             <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-              Sarah, Clément, +{Math.max(0, event.attending - 2)} autres
+              {participantSummary}
             </div>
           </div>
 
@@ -302,20 +336,21 @@ const EventSheet = ({ event, onClose }) => {
             alignItems: 'center',
             gap: 10,
           }}>
-            <Icon name={user ? 'check' : 'bell'} size={16} color={user ? 'var(--success)' : event.bar.color} />
+            <Icon name={canParticipate ? 'check' : 'bell'} size={16} color={canParticipate ? 'var(--success)' : currentEvent.bar.color} />
             <div style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45 }}>
-              {user
+              {canParticipate
                 ? 'Ta participation restera visible dans cette fiche pour suivre la soirée.'
-                : 'Connecte-toi plus tard pour retrouver facilement les soirées qui t’intéressent.'}
+                : 'Connecte-toi pour enregistrer tes soirées et suivre les participants en direct.'}
             </div>
           </div>
 
           <button
             onClick={handleToggleAttending}
+            disabled={!canParticipate}
             style={{
               width: '100%',
               marginTop: 22,
-              background: attending ? 'var(--success)' : event.bar.color,
+              background: canParticipate ? (attending ? 'var(--success)' : currentEvent.bar.color) : 'rgba(42,31,23,0.18)',
               color: '#fff',
               border: 'none',
               padding: 16,
@@ -323,18 +358,23 @@ const EventSheet = ({ event, onClose }) => {
               fontSize: 15,
               fontWeight: 600,
               fontFamily: 'inherit',
-              cursor: 'pointer',
+              cursor: canParticipate ? 'pointer' : 'default',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              boxShadow: attending ? '0 10px 24px rgba(109,143,82,0.22)' : `0 10px 24px ${event.bar.color}33`,
+              boxShadow: attending
+                ? '0 10px 24px rgba(109,143,82,0.22)'
+                : `0 10px 24px ${currentEvent.bar.color}33`,
               transition: 'background 0.2s ease, box-shadow 0.2s ease',
             }}
           >
             <Icon name={attending ? 'check' : 'plus'} size={16} color="#fff" />
-            {attending ? 'Participation confirmée' : 'Je participe'}
+            {canParticipate
+              ? (attending ? 'Participation confirmée' : 'Je participe')
+              : 'Connecte-toi pour participer'}
           </button>
+
           <button
             onClick={handleShare}
             style={{

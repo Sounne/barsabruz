@@ -23,7 +23,7 @@ const BAR_COORDINATES = {
 export async function fetchBars() {
   const [{ data: bars, error: barsError }, { data: events, error: eventsError }] = await Promise.all([
     supabase.from('bars').select('*').order('rating', { ascending: false }),
-    supabase.from('events').select('*'),
+    supabase.from('events').select('*').order('starts_at', { ascending: true }),
   ])
 
   if (barsError) throw barsError
@@ -304,12 +304,63 @@ export function unsubscribeChannel(channel) {
 
 // ─────────── EVENTS ───────────
 
-export async function joinEvent(eventId, userId) {
-  const { error } = await supabase
+export async function fetchJoinedEventIds(userId) {
+  const { data, error } = await supabase
     .from('event_attendees')
-    .insert({ event_id: eventId, user_id: userId })
+    .select('event_id')
+    .eq('user_id', userId)
 
   if (error) throw error
+  return new Set((data ?? []).map(row => row.event_id))
+}
+
+export async function fetchAllEventParticipants(eventIds) {
+  if (!eventIds?.length) return {}
+
+  const { data, error } = await supabase
+    .from('event_attendees')
+    .select('event_id, user_id, joined_at, profiles(name, avatar_letter, avatar_url, color)')
+    .in('event_id', eventIds)
+    .order('joined_at')
+
+  if (error) throw error
+
+  const map = {}
+  for (const row of data ?? []) {
+    if (!map[row.event_id]) map[row.event_id] = []
+    map[row.event_id].push({
+      ...(row.profiles ?? {}),
+      user_id: row.user_id,
+      joined_at: row.joined_at,
+    })
+  }
+  return map
+}
+
+export async function joinEvent(eventId) {
+  const { data, error } = await supabase.rpc('join_event', { p_event_id: eventId })
+  if (error) throw error
+  return data ?? 0
+}
+
+export async function unjoinEvent(eventId) {
+  const { data, error } = await supabase.rpc('unjoin_event', { p_event_id: eventId })
+  if (error) throw error
+  return data ?? 0
+}
+
+export function subscribeToEvents(callback) {
+  return supabase
+    .channel('public:events')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, callback)
+    .subscribe()
+}
+
+export function subscribeToEventAttendees(callback) {
+  return supabase
+    .channel('public:event_attendees')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'event_attendees' }, callback)
+    .subscribe()
 }
 
 // ─────────── AUTH ───────────

@@ -17,6 +17,8 @@ const MONTHS = {
 }
 
 const DEFAULT_TAG_ORDER = ['Live', 'Quiz', 'Sport', 'Dégustation', 'Musique', 'Événement']
+const WEEKDAY_LABELS = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.']
+const MONTH_LABELS = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre']
 
 function toNumber(value, fallback = 0) {
   const num = Number(value)
@@ -73,17 +75,34 @@ function resolveStartDate(event, referenceDate) {
   return parsedDate
 }
 
+function formatFrenchDateLabel(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
+  const weekday = WEEKDAY_LABELS[date.getDay()]
+  const day = date.getDate()
+  const month = MONTH_LABELS[date.getMonth()]
+  return `${weekday} ${day === 1 ? '1er' : day} ${month}`
+}
+
+function formatTimeLabel(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 export function normalizeBarEvent(event, bar, referenceDate = new Date()) {
   const startsAt = resolveStartDate(event, referenceDate)
+  const dateLabel = event?.date ?? event?.date_label ?? event?.dateLabel ?? formatFrenchDateLabel(startsAt)
+  const timeLabel = event?.time ?? event?.time_label ?? event?.timeLabel ?? formatTimeLabel(startsAt)
+
   return {
     ...event,
     id: event?.id ?? `${bar?.id ?? 'bar'}-${event?.title ?? 'event'}`,
     title: event?.title ?? 'Soirée du bar',
-    date: event?.date ?? event?.date_label ?? event?.dateLabel ?? '',
-    time: event?.time ?? event?.time_label ?? event?.timeLabel ?? '',
+    date: dateLabel,
+    time: timeLabel,
     price: event?.price ?? event?.price_label ?? event?.priceLabel ?? 'Gratuit',
     tag: event?.tag ?? event?.category ?? event?.type ?? 'Événement',
     attending: toNumber(event?.attending ?? event?.interested_count ?? event?.interestedCount, 0),
+    description: event?.description ?? event?.details ?? '',
     startsAt,
     startsAtTs: startsAt?.getTime?.() ?? Number.POSITIVE_INFINITY,
     bar,

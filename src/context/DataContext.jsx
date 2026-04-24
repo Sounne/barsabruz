@@ -10,6 +10,9 @@ import {
   fetchPendingInvitations,
   acceptAnnonceInvitation, declineAnnonceInvitation,
   sendAnnonceInvitations,
+  fetchAllEventParticipants, fetchJoinedEventIds,
+  joinEvent as svcJoinEvent, unjoinEvent as svcUnjoinEvent,
+  subscribeToEvents, subscribeToEventAttendees,
 } from '../services'
 import { getAccessibleGroups, getFriends } from '../lib/chatApi'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
@@ -18,13 +21,24 @@ import { getBarEvents, getEventTags } from '../utils/events'
 
 const DataContext = React.createContext(null)
 
+function updateEventInBars(list, eventId, updater) {
+  return (list ?? []).map(bar => ({
+    ...bar,
+    events: (bar.events ?? []).map(event => (
+      event.id === eventId ? updater(event, bar) : event
+    )),
+  }))
+}
+
 export function DataProvider({ children }) {
   const { user } = useAuth()
   const [bars, setBars] = React.useState(null)
   const [annonces, setAnnonces] = React.useState(null)
   const [participantsMap, setParticipantsMap] = React.useState({})
+  const [eventParticipantsMap, setEventParticipantsMap] = React.useState({})
   const [profile, setProfile] = React.useState(null)
   const [myJoins, setMyJoins] = React.useState(new Set())
+  const [joinedEventIds, setJoinedEventIds] = React.useState(new Set())
   const [myGroups, setMyGroups] = React.useState([])
   const [friends, setFriends] = React.useState([])
   const [invitations, setInvitations] = React.useState([])
@@ -90,6 +104,18 @@ export function DataProvider({ children }) {
     } catch {}
   }, [])
 
+  const loadEventParticipants = React.useCallback(async (barsList) => {
+    const ids = getBarEvents(barsList ?? [], { includePast: true }).map(event => event.id)
+    if (!ids.length) {
+      setEventParticipantsMap({})
+      return
+    }
+    try {
+      const map = await fetchAllEventParticipants(ids)
+      setEventParticipantsMap(map)
+    } catch {}
+  }, [])
+
   React.useEffect(() => {
     skipNotificationWriteRef.current = true
     skipNotificationSettingsWriteRef.current = true
@@ -132,8 +158,10 @@ export function DataProvider({ children }) {
         ])
         if (!cancelled) {
           const resolvedAnnonces = annoncesData?.length ? annoncesData : ANNONCES_PUBLIC
-          setBars(barsData?.length ? barsData : BARS_DATA)
+          const resolvedBars = barsData?.length ? barsData : BARS_DATA
+          setBars(resolvedBars)
           setAnnonces(resolvedAnnonces)
+          loadEventParticipants(resolvedBars)
           if (annoncesData?.length) loadParticipants(annoncesData)
         }
       } catch (err) {
@@ -141,6 +169,7 @@ export function DataProvider({ children }) {
         if (!cancelled) {
           setBars(BARS_DATA)
           setAnnonces(ANNONCES_PUBLIC)
+          setEventParticipantsMap({})
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -148,7 +177,7 @@ export function DataProvider({ children }) {
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [loadEventParticipants, loadParticipants])
 
   React.useEffect(() => {
     let channel
@@ -182,6 +211,30 @@ export function DataProvider({ children }) {
     return () => { if (channel) unsubscribeChannel(channel) }
   }, [])
 
+  React.useEffect(() => {
+    const refreshEvents = () => {
+      fetchBars()
+        .then(data => {
+          const resolvedBars = data?.length ? data : BARS_DATA
+          setBars(resolvedBars)
+          loadEventParticipants(resolvedBars)
+        })
+        .catch(() => {})
+    }
+
+    let eventsChannel
+    let attendeesChannel
+    try {
+      eventsChannel = subscribeToEvents(refreshEvents)
+      attendeesChannel = subscribeToEventAttendees(refreshEvents)
+    } catch {}
+
+    return () => {
+      if (eventsChannel) unsubscribeChannel(eventsChannel)
+      if (attendeesChannel) unsubscribeChannel(attendeesChannel)
+    }
+  }, [loadEventParticipants])
+
   // Load profile when auth user changes
   React.useEffect(() => {
     if (!user) {
@@ -199,6 +252,13 @@ export function DataProvider({ children }) {
     fetchJoinedAnnonceIds(user.id)
       .then(ids => setMyJoins(ids))
       .catch(() => {})
+  }, [user?.id])
+
+  React.useEffect(() => {
+    if (!user) { setJoinedEventIds(new Set()); return }
+    fetchJoinedEventIds(user.id)
+      .then(ids => setJoinedEventIds(ids))
+      .catch(() => setJoinedEventIds(new Set()))
   }, [user?.id])
 
   // Load groups and friends when auth user changes
@@ -342,6 +402,102 @@ export function DataProvider({ children }) {
     if (!user || !inviteeIds?.length) return
     await sendAnnonceInvitations(annonceId, user.id, inviteeIds)
   }, [user?.id])
+
+  const joinEvent = React.useCallback(async (eventId) => {
+    if (!user) return
+
+    setBars(prev => updateEventInBars(prev, eventId, event => ({
+      ...event,
+      attending: event.attending + 1,
+    })))
+    setJoinedEventIds(prev => new Set([...prev, eventId]))
+    setEventParticipantsMap(prev => {
+      const list = prev[eventId] ?? []
+      if (list.some(participant => participant.user_id === user.id)) return prev
+
+      return {
+        ...prev,
+        [eventId]: [...list, {
+          user_id: user.id,
+          name: profile?.name ?? user.user_metadata?.name ?? 'Toi',
+          avatar_letter: profile?.avatar_letter ?? (profile?.name?.[0] ?? user.email?.[0] ?? 'T').toUpperCase(),
+          avatar_url: profile?.avatar_url ?? null,
+          color: profile?.color ?? '#C65D3D',
+          joined_at: new Date().toISOString(),
+        }],
+      }
+    })
+
+    try {
+      const newCount = await svcJoinEvent(eventId)
+      setBars(prev => updateEventInBars(prev, eventId, event => ({
+        ...event,
+        attending: newCount,
+      })))
+    } catch {
+      setBars(prev => updateEventInBars(prev, eventId, event => ({
+        ...event,
+        attending: Math.max(0, event.attending - 1),
+      })))
+      setJoinedEventIds(prev => {
+        const next = new Set(prev)
+        next.delete(eventId)
+        return next
+      })
+      setEventParticipantsMap(prev => ({
+        ...prev,
+        [eventId]: (prev[eventId] ?? []).filter(participant => participant.user_id !== user.id),
+      }))
+    }
+  }, [profile, user])
+
+  const unjoinEvent = React.useCallback(async (eventId) => {
+    if (!user) return
+
+    setBars(prev => updateEventInBars(prev, eventId, event => ({
+      ...event,
+      attending: Math.max(0, event.attending - 1),
+    })))
+    setJoinedEventIds(prev => {
+      const next = new Set(prev)
+      next.delete(eventId)
+      return next
+    })
+    setEventParticipantsMap(prev => ({
+      ...prev,
+      [eventId]: (prev[eventId] ?? []).filter(participant => participant.user_id !== user.id),
+    }))
+
+    try {
+      const newCount = await svcUnjoinEvent(eventId)
+      setBars(prev => updateEventInBars(prev, eventId, event => ({
+        ...event,
+        attending: newCount,
+      })))
+    } catch {
+      setBars(prev => updateEventInBars(prev, eventId, event => ({
+        ...event,
+        attending: event.attending + 1,
+      })))
+      setJoinedEventIds(prev => new Set([...prev, eventId]))
+      setEventParticipantsMap(prev => {
+        const list = prev[eventId] ?? []
+        if (list.some(participant => participant.user_id === user.id)) return prev
+
+        return {
+          ...prev,
+          [eventId]: [...list, {
+            user_id: user.id,
+            name: profile?.name ?? user.user_metadata?.name ?? 'Toi',
+            avatar_letter: profile?.avatar_letter ?? (profile?.name?.[0] ?? user.email?.[0] ?? 'T').toUpperCase(),
+            avatar_url: profile?.avatar_url ?? null,
+            color: profile?.color ?? '#C65D3D',
+            joined_at: new Date().toISOString(),
+          }],
+        }
+      })
+    }
+  }, [profile, user])
 
   const notifications = React.useMemo(() => {
     if (!user) return []
@@ -515,14 +671,18 @@ export function DataProvider({ children }) {
     agendaTags,
     annonces: annonces ?? ANNONCES_PUBLIC,
     participantsMap,
+    eventParticipantsMap,
     user: userData,
     profile,
     saveProfile,
     joinAnnonce,
     unjoinAnnonce,
+    joinEvent,
+    unjoinEvent,
     deleteAnnonce,
     addAnnonce,
     joinedAnnonceIds: myJoins,
+    joinedEventIds,
     myGroups,
     friends,
     invitations,
