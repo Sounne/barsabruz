@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar, BarHero, shade, Wip } from '../components/ui'
+import { Icon, Avatar, shade } from '../components/ui'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { signOut, uploadAvatar } from '../services'
@@ -180,34 +180,6 @@ const EditProfileSheet = ({ user, onSave, onClose, authUserId }) => {
 }
 
 // ─────────── FAVORITE BAR CARD ───────────
-const FavBarCard = ({ bar, onOpen }) => (
-  <div onClick={() => onOpen(bar.id)}
-    style={{
-      flex: '0 0 170px', borderRadius: 16, overflow: 'hidden',
-      boxShadow: 'var(--shadow-card)', cursor: 'pointer', position: 'relative',
-    }}>
-    <BarHero bar={bar} height={110} small/>
-    <div style={{
-      position: 'absolute', inset: 0,
-      background: 'linear-gradient(to top, rgba(0,0,0,0.6) 40%, transparent 100%)',
-      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-      padding: '0 10px 10px',
-    }}>
-      <div className="serif" style={{ color: '#fff', fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}>{bar.name}</div>
-      <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, marginTop: 2 }}>{bar.tagline.split(' · ')[0]}</div>
-    </div>
-    <div style={{
-      position: 'absolute', top: 8, right: 8,
-      width: 26, height: 26, borderRadius: '50%',
-      background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(6px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      border: '1px solid rgba(255,255,255,0.3)',
-    }}>
-      <Icon name="heart" size={13} color="#fff" stroke={2}/>
-    </div>
-  </div>
-)
-
 // ─────────── SORTIE ROW ───────────
 const SortieRow = ({ sortie, bar, onOpen }) => (
   <div onClick={() => onOpen?.(bar?.id)}
@@ -268,15 +240,13 @@ const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
 )
 
 // ─────────── ACCOUNT SCREEN ───────────
-const AccountScreen = ({ onOpenAnnonce, onOpenBar, onOpenNotifications }) => {
-  const { user, bars, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, unreadNotificationCount, notificationSettings } = useData()
+const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) => {
+  const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, unreadNotificationCount, notificationSettings } = useData()
   const { user: authUser } = useAuth()
   const [editing, setEditing] = React.useState(false)
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
   const [annoncesExpanded, setAnnoncesExpanded] = React.useState(false)
   const [signingOut, setSigningOut] = React.useState(false)
-
-  const favBars = bars.filter(b => user.favorites.includes(b.id))
 
   // Mes annonces = sorties I created
   const mesAnnonces = authUser
@@ -361,31 +331,6 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar, onOpenNotifications }) => {
         </div>
       </div>
 
-      {/* Bars favoris */}
-      {favBars.length > 0 && (
-        <Wip>
-        <div style={{ padding: '22px 0 10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 20px', marginBottom: 12 }}>
-            <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Bars favoris</h2>
-            <span style={{ fontSize: 12, color: 'var(--terracotta)', fontWeight: 600 }}>{favBars.length} bar{favBars.length > 1 ? 's' : ''}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 20px 4px', scrollSnapType: 'x mandatory' }} className="noscroll">
-            {favBars.map(bar => (
-              <FavBarCard key={bar.id} bar={bar} onOpen={onOpenBar}/>
-            ))}
-            <div onClick={() => {}} style={{
-              flex: '0 0 80px', borderRadius: 16, border: '1.5px dashed var(--line-strong)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 6, cursor: 'pointer', minHeight: 110, color: 'var(--ink-mute)',
-            }}>
-              <Icon name="plus" size={18} color="var(--ink-mute)"/>
-              <span style={{ fontSize: 10, fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>Ajouter</span>
-            </div>
-          </div>
-        </div>
-        </Wip>
-      )}
-
       {/* Mes annonces (sorties créées) */}
       {authUser && (
         <div style={{ padding: '14px 20px 10px' }}>
@@ -468,10 +413,8 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar, onOpenNotifications }) => {
               onClick: onOpenNotifications,
               active: true,
             },
-            { icon: 'heart', label: 'Bars favoris', detail: String(favBars.length) },
-            { icon: 'users', label: 'Mes amis', detail: String(friends.length) },
+            { icon: 'users', label: 'Mes amis', detail: String(friends.length), onClick: onOpenFriends, active: true },
             { icon: 'lock', label: 'Confidentialité', detail: '' },
-            { icon: 'globe', label: 'Langue', detail: 'Français' },
           ].map((row, i, arr) => (
             <div key={row.label} onClick={row.onClick} style={{
               display: 'flex', alignItems: 'center', gap: 12,

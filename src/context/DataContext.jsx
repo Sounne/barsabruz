@@ -14,7 +14,7 @@ import {
   joinEvent as svcJoinEvent, unjoinEvent as svcUnjoinEvent,
   subscribeToEvents, subscribeToEventAttendees,
 } from '../services'
-import { getAccessibleGroups, getFriends } from '../lib/chatApi'
+import { getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe } from '../lib/chatApi'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
 import { getBarEvents, getEventTags } from '../utils/events'
@@ -283,6 +283,20 @@ export function DataProvider({ children }) {
       .then(setFriends)
       .catch(() => {})
     refreshInvitations()
+  }, [user?.id])
+
+  React.useEffect(() => {
+    if (!user) return
+    let channel
+    const refreshFriends = () => {
+      getFriends(user.id)
+        .then(setFriends)
+        .catch(() => {})
+    }
+    try {
+      channel = subscribeToFriendships(user.id, refreshFriends)
+    } catch {}
+    return () => { if (channel) unsubscribe(channel) }
   }, [user?.id])
 
   React.useEffect(() => {

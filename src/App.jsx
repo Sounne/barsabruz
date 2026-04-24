@@ -82,6 +82,7 @@ const App = () => {
   const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount } = useData()
   const isLoggedIn = !!session?.user
   const [tab, setTab] = React.useState('home')
+  const [socialTab, setSocialTab] = React.useState('groupes')
   const [slideDir, setSlideDir] = React.useState(null)
   const [barId, setBarId] = React.useState(null)
   const [eventSheet, setEventSheet] = React.useState(null)
@@ -108,6 +109,10 @@ const App = () => {
     openEvent: (e) => setEventSheet(e),
     openGroup: (g) => setGroupChat(g),
     openDM: (friend) => setDmChat(friend),
+    openFriends: () => {
+      setSocialTab('amis')
+      handleTabChange('groupes')
+    },
     openAnnonce: (a) => setSortieSheet(a),
     openNotifications: () => {
       if (!isLoggedIn) return
@@ -182,11 +187,22 @@ const App = () => {
           </DeferredScreen>
         ) : tab === 'groupes' ? (
           <DeferredScreen>
-            <GroupesScreen onOpenGroup={navigate.openGroup} onOpenDM={navigate.openDM} onNew={() => setNewAnnonce(true)} refreshKey={groupsRefreshKey}/>
+            <GroupesScreen
+              onOpenGroup={navigate.openGroup}
+              onOpenDM={navigate.openDM}
+              onNew={() => setNewAnnonce(true)}
+              refreshKey={groupsRefreshKey}
+              initialTab={socialTab}
+              onTabChange={setSocialTab}
+            />
           </DeferredScreen>
         ) : session ? (
           <DeferredScreen>
-            <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar} onOpenNotifications={navigate.openNotifications}/>
+            <AccountScreen
+              onOpenAnnonce={navigate.openAnnonce}
+              onOpenNotifications={navigate.openNotifications}
+              onOpenFriends={navigate.openFriends}
+            />
           </DeferredScreen>
         ) : (
           <DeferredScreen>

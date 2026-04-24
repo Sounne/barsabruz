@@ -102,9 +102,9 @@ const GroupRow = ({ group, onOpen, onJoin, joining }) => {
 
 // ═══════════════ GROUPES SCREEN ═══════════════
 
-const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0 }) => {
+const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTab = 'groupes', onTabChange }) => {
   const { user: authUser } = useAuth()
-  const [mainTab, setMainTab] = React.useState('groupes')
+  const [mainTab, setMainTab] = React.useState(initialTab)
   const [groupFilter, setGroupFilter] = React.useState('all')
   const [groups, setGroups] = React.useState(null)
   const [joining, setJoining] = React.useState(null)
@@ -135,6 +135,32 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0 }) => {
       .then(([f, p]) => { setFriends(f); setPending(p) })
       .catch(() => {})
       .finally(() => setFriendsLoading(false))
+  }, [authUser?.id])
+
+  React.useEffect(() => {
+    setMainTab(initialTab)
+  }, [initialTab])
+
+  React.useEffect(() => {
+    onTabChange?.(mainTab)
+  }, [mainTab, onTabChange])
+
+  React.useEffect(() => {
+    if (!authUser) return
+    const refreshFriends = () => {
+      Promise.all([chatApi.getFriends(authUser.id), chatApi.getPendingRequests(authUser.id)])
+        .then(([f, p]) => { setFriends(f); setPending(p) })
+        .catch(() => {})
+    }
+
+    let channel
+    try {
+      channel = chatApi.subscribeToFriendships(authUser.id, refreshFriends)
+    } catch {}
+
+    return () => {
+      if (channel) chatApi.unsubscribe(channel)
+    }
   }, [authUser?.id])
 
   React.useEffect(() => {

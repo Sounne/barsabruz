@@ -58,6 +58,23 @@ export async function removeFriend(friendshipId) {
   if (error) throw error
 }
 
+export function subscribeToFriendships(userId, callback) {
+  return supabase
+    .channel(`friendships:${userId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'friendships',
+    }, payload => {
+      const row = payload.new ?? payload.old
+      if (!row) return
+      if (row.requester === userId || row.addressee === userId) {
+        callback(payload)
+      }
+    })
+    .subscribe()
+}
+
 export async function searchUsers(query) {
   const { data, error } = await supabase
     .from('profiles')
