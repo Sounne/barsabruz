@@ -75,6 +75,28 @@ export function subscribeToFriendships(userId, callback) {
     .subscribe()
 }
 
+export async function getProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, handle, avatar_letter, avatar_url, color, bio')
+    .eq('id', userId)
+    .single()
+  if (error) throw error
+  return data
+}
+
+export function subscribeToProfile(userId, callback) {
+  return supabase
+    .channel(`profile:${userId}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'profiles',
+      filter: `id=eq.${userId}`,
+    }, payload => callback(payload.new))
+    .subscribe()
+}
+
 export async function searchUsers(query) {
   const { data, error } = await supabase
     .from('profiles')

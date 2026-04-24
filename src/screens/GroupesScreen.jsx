@@ -100,6 +100,118 @@ const GroupRow = ({ group, onOpen, onJoin, joining }) => {
   )
 }
 
+// ═══════════════ FRIEND PROFILE SHEET ═══════════════
+
+const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
+  const [profile, setProfile] = React.useState(null)
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState('')
+
+  React.useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    chatApi.getProfile(friend.id)
+      .then(p => { if (!cancelled) setProfile(p) })
+      .catch(() => { if (!cancelled) setError('Profil indisponible') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    let channel
+    try {
+      channel = chatApi.subscribeToProfile(friend.id, (updated) => {
+        if (!cancelled) setProfile(prev => ({ ...(prev ?? {}), ...updated }))
+      })
+    } catch {}
+
+    return () => {
+      cancelled = true
+      if (channel) chatApi.unsubscribe(channel)
+    }
+  }, [friend.id])
+
+  const display = profile || friend
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, background: 'rgba(42,31,23,0.45)',
+        zIndex: 180, animation: 'fadeIn 0.15s ease',
+      }}/>
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'var(--paper)', borderRadius: '24px 24px 0 0',
+        padding: '0 20px 32px', zIndex: 190,
+        maxWidth: 520, margin: '0 auto',
+        animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
+        boxShadow: '0 -8px 40px rgba(42,31,23,0.14)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 10px' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--line-strong)' }}/>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer' }}>
+            <Icon name="close" size={20} color="var(--ink-mute)"/>
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, paddingBottom: 18 }}>
+          <Avatar
+            letter={display.avatar_letter}
+            src={display.avatar_url}
+            color={display.color}
+            size={88}
+            ring
+          />
+          <div className="serif" style={{ fontSize: 22, fontWeight: 600, textAlign: 'center' }}>
+            {display.name}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>{display.handle}</div>
+          {loading && !profile && (
+            <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>Chargement…</div>
+          )}
+          {display.bio && (
+            <div style={{
+              marginTop: 6, fontSize: 14, color: 'var(--ink-soft)',
+              lineHeight: 1.5, textAlign: 'center', maxWidth: 360,
+            }}>
+              {display.bio}
+            </div>
+          )}
+          {error && !profile && (
+            <div style={{ fontSize: 12, color: 'var(--terracotta)' }}>{error}</div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+          <button onClick={() => { onOpenDM(friend); onClose() }} style={{
+            flex: 1, padding: '13px 0', borderRadius: 12,
+            background: 'var(--terracotta)', color: '#fff',
+            border: 'none', fontSize: 14, fontWeight: 600,
+            fontFamily: 'inherit', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            boxShadow: '0 4px 14px rgba(198,93,61,0.35)',
+          }}>
+            <Icon name="send" size={15} color="#fff"/>
+            Envoyer un message
+          </button>
+          {onRemove && (
+            <button onClick={onRemove} style={{
+              padding: '13px 16px', borderRadius: 12,
+              background: '#fff', color: 'var(--ink-soft)',
+              border: '1px solid var(--line)', fontSize: 14, fontWeight: 600,
+              fontFamily: 'inherit', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="trash" size={15} color="var(--ink-mute)"/>
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ═══════════════ GROUPES SCREEN ═══════════════
 
 const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTab = 'groupes', onTabChange }) => {
@@ -184,6 +296,7 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
   }
 
   const [removingFriend, setRemovingFriend] = React.useState(null)
+  const [viewingFriend, setViewingFriend] = React.useState(null)
 
   const handleRemoveFriend = async () => {
     if (!removingFriend) return
@@ -453,7 +566,7 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
                 Amis ({friends.length})
               </div>
               {friends.map(friend => (
-                <div key={friend.id} onClick={() => onOpenDM(friend)} style={{
+                <div key={friend.id} onClick={() => setViewingFriend(friend)} style={{
                   background: '#fff', borderRadius: 12, padding: '12px 14px',
                   display: 'flex', alignItems: 'center', gap: 10,
                   boxShadow: 'var(--shadow-card)', cursor: 'pointer',
@@ -464,10 +577,11 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
                     <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{friend.handle}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <div style={{
+                    <div onClick={e => { e.stopPropagation(); onOpenDM(friend) }} style={{
                       width: 34, height: 34, borderRadius: '50%',
                       background: 'rgba(198,93,61,0.1)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer',
                     }}>
                       <Icon name="send" size={15} color="var(--terracotta)"/>
                     </div>
@@ -518,6 +632,15 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
             </>
           )}
         </div>
+      )}
+
+      {viewingFriend && (
+        <FriendProfileSheet
+          friend={viewingFriend}
+          onClose={() => setViewingFriend(null)}
+          onOpenDM={onOpenDM}
+          onRemove={() => { setRemovingFriend(viewingFriend); setViewingFriend(null) }}
+        />
       )}
     </div>
   )
