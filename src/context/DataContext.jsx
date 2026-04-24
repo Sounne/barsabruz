@@ -12,7 +12,7 @@ import {
   sendAnnonceInvitations,
   fetchAllEventParticipants, fetchJoinedEventIds,
   joinEvent as svcJoinEvent, unjoinEvent as svcUnjoinEvent,
-  subscribeToEvents, subscribeToEventAttendees,
+  subscribeToBars, subscribeToEvents, subscribeToEventAttendees,
 } from '../services'
 import { getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe } from '../lib/chatApi'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
@@ -108,7 +108,10 @@ export function DataProvider({ children }) {
     const ids = (annoncesList ?? [])
       .filter(a => typeof a.id === 'string' && !a.id.startsWith('p'))
       .map(a => a.id)
-    if (!ids.length) return
+    if (!ids.length) {
+      setParticipantsMap({})
+      return
+    }
     try {
       const map = await fetchAllAnnonceParticipants(ids)
       setParticipantsMap(map)
@@ -127,6 +130,26 @@ export function DataProvider({ children }) {
       setBars(prev => syncBarsEventCounts(prev, map))
     } catch {}
   }, [])
+
+  const refreshJoinedAnnonces = React.useCallback(() => {
+    if (!user) {
+      setMyJoins(new Set())
+      return Promise.resolve()
+    }
+    return fetchJoinedAnnonceIds(user.id)
+      .then(ids => setMyJoins(ids))
+      .catch(() => {})
+  }, [user?.id])
+
+  const refreshJoinedEvents = React.useCallback(() => {
+    if (!user) {
+      setJoinedEventIds(new Set())
+      return Promise.resolve()
+    }
+    return fetchJoinedEventIds(user.id)
+      .then(ids => setJoinedEventIds(ids))
+      .catch(() => setJoinedEventIds(new Set()))
+  }, [user?.id])
 
   React.useEffect(() => {
     skipNotificationWriteRef.current = true
@@ -198,12 +221,13 @@ export function DataProvider({ children }) {
         fetchAnnonces()
           .then(data => {
             if (data?.length) loadParticipants(data)
+            refreshJoinedAnnonces()
           })
           .catch(() => {})
       })
     } catch {}
     return () => { if (channel) unsubscribeChannel(channel) }
-  }, [loadParticipants])
+  }, [loadParticipants, refreshJoinedAnnonces])
 
   // Real-time subscription to annonces (new sorties, count updates, deletions)
   React.useEffect(() => {
@@ -215,13 +239,14 @@ export function DataProvider({ children }) {
             if (data?.length) {
               setAnnonces(data)
               loadParticipants(data)
+              refreshJoinedAnnonces()
             }
           })
           .catch(() => {})
       })
     } catch {}
     return () => { if (channel) unsubscribeChannel(channel) }
-  }, [])
+  }, [loadParticipants, refreshJoinedAnnonces])
 
   React.useEffect(() => {
     const refreshEvents = () => {
@@ -230,22 +255,26 @@ export function DataProvider({ children }) {
           const resolvedBars = data?.length ? data : BARS_DATA
           setBars(resolvedBars)
           loadEventParticipants(resolvedBars)
+          refreshJoinedEvents()
         })
         .catch(() => {})
     }
 
+    let barsChannel
     let eventsChannel
     let attendeesChannel
     try {
+      barsChannel = subscribeToBars(refreshEvents)
       eventsChannel = subscribeToEvents(refreshEvents)
       attendeesChannel = subscribeToEventAttendees(refreshEvents)
     } catch {}
 
     return () => {
+      if (barsChannel) unsubscribeChannel(barsChannel)
       if (eventsChannel) unsubscribeChannel(eventsChannel)
       if (attendeesChannel) unsubscribeChannel(attendeesChannel)
     }
-  }, [loadEventParticipants])
+  }, [loadEventParticipants, refreshJoinedEvents])
 
   // Load profile when auth user changes
   React.useEffect(() => {
@@ -261,17 +290,13 @@ export function DataProvider({ children }) {
   // Load joined annonce IDs when auth user changes
   React.useEffect(() => {
     if (!user) { setMyJoins(new Set()); return }
-    fetchJoinedAnnonceIds(user.id)
-      .then(ids => setMyJoins(ids))
-      .catch(() => {})
-  }, [user?.id])
+    refreshJoinedAnnonces()
+  }, [user?.id, refreshJoinedAnnonces])
 
   React.useEffect(() => {
     if (!user) { setJoinedEventIds(new Set()); return }
-    fetchJoinedEventIds(user.id)
-      .then(ids => setJoinedEventIds(ids))
-      .catch(() => setJoinedEventIds(new Set()))
-  }, [user?.id])
+    refreshJoinedEvents()
+  }, [user?.id, refreshJoinedEvents])
 
   // Load groups and friends when auth user changes
   React.useEffect(() => {

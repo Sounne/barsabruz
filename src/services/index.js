@@ -279,6 +279,13 @@ export function subscribeToAnnonces(callback) {
     .subscribe()
 }
 
+export function subscribeToBars(callback) {
+  return supabase
+    .channel('public:bars')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bars' }, callback)
+    .subscribe()
+}
+
 export function subscribeToAnnonceParticipants(callback) {
   return supabase
     .channel('public:annonce_participants')
