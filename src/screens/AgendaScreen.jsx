@@ -1,7 +1,8 @@
 import React from 'react'
-import { Icon, BarHero, Wip } from '../components/ui'
+import { Avatar, Icon, BarHero } from '../components/ui'
 import { useData } from '../context/DataContext'
 import { groupEventsByDate } from '../utils/events'
+import { useAuth } from '../context/AuthContext'
 
 const EVENT_ICONS = {
   Live: 'music',
@@ -137,7 +138,44 @@ const AgendaScreen = ({ onOpenEvent }) => {
 }
 
 const EventSheet = ({ event, onClose }) => {
-  const [attending] = React.useState(false)
+  const { user } = useAuth()
+  const [attending, setAttending] = React.useState(false)
+  const [shareLabel, setShareLabel] = React.useState('Partager à un groupe')
+  const attendeePreview = [
+    { id: 'sarah', name: 'Sarah', avatar: 'S', color: '#C8B7A6' },
+    { id: 'clement', name: 'Clément', avatar: 'C', color: '#B8B2AA' },
+    { id: 'lea', name: 'Léa', avatar: 'L', color: '#D8D1C8' },
+    { id: 'nassim', name: 'Nassim', avatar: 'N', color: '#CDC3B5' },
+    { id: 'rose', name: 'Rose', avatar: 'R', color: '#D7CEC0' },
+  ]
+
+  const handleToggleAttending = () => {
+    setAttending(value => !value)
+  }
+
+  const handleShare = async () => {
+    const message = `${event.title} · ${event.date} à ${event.time} chez ${event.bar.name}`
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: event.title,
+          text: message,
+        })
+        setShareLabel('Partagé')
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(message)
+        setShareLabel('Lien copié')
+      } else {
+        setShareLabel('Partage indisponible')
+      }
+    } catch {
+      setShareLabel('Partager à un groupe')
+    }
+    window.setTimeout(() => {
+      setShareLabel('Partager à un groupe')
+    }, 1800)
+  }
+
   if (!event) return null
 
   return (
@@ -190,16 +228,17 @@ const EventSheet = ({ event, onClose }) => {
             position: 'absolute',
             top: 16,
             left: 16,
-            background: 'rgba(255,255,255,0.95)',
-            padding: '6px 12px',
+            background: '#fff',
+            padding: '8px 14px',
             borderRadius: 999,
             fontSize: 11,
-            fontWeight: 600,
+            fontWeight: 700,
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            letterSpacing: '0.08em',
             color: event.bar.color,
+            boxShadow: 'var(--shadow-float)',
           }}>
-            {event.tag}
+            {String(event.tag).toUpperCase()}
           </div>
         </div>
 
@@ -212,6 +251,9 @@ const EventSheet = ({ event, onClose }) => {
           </div>
           <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 4 }}>
             À <b>{event.bar.name}</b> · {event.bar.address}
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--ink-soft)', marginTop: 14, lineHeight: 1.55 }}>
+            {event.description ?? `Retrouve l'ambiance ${String(event.tag).toLowerCase()} de ${event.bar.name} et rejoins la communauté pour une soirée à ${event.time}.`}
           </div>
           <div style={{
             display: 'grid',
@@ -229,32 +271,51 @@ const EventSheet = ({ event, onClose }) => {
             </div>
           </div>
 
-          <Wip>
-            <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'flex' }}>
-                {['#C65D3D', '#6B3A4A', '#D9A44A', '#6D7A3D', '#7FA7B8'].map((color, index) => (
-                  <div
-                    key={color}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      background: color,
-                      border: '2px solid var(--paper)',
-                      marginLeft: index === 0 ? 0 : -10,
-                    }}
-                  />
-                ))}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                Sarah, Clément, +{Math.max(0, event.attending - 2)} autres
-              </div>
+          <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex' }}>
+              {attendeePreview.map((person, index) => (
+                <Avatar
+                  key={person.id}
+                  letter={person.avatar}
+                  color={person.color}
+                  size={30}
+                  style={{
+                    border: '2px solid var(--paper)',
+                    marginLeft: index === 0 ? 0 : -10,
+                    boxShadow: '0 2px 6px rgba(42,31,23,0.08)',
+                  }}
+                />
+              ))}
             </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+              Sarah, Clément, +{Math.max(0, event.attending - 2)} autres
+            </div>
+          </div>
 
-            <button style={{
+          <div style={{
+            marginTop: 18,
+            background: 'rgba(255,255,255,0.72)',
+            borderRadius: 16,
+            border: '1px solid rgba(42,31,23,0.08)',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <Icon name={user ? 'check' : 'bell'} size={16} color={user ? 'var(--success)' : event.bar.color} />
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45 }}>
+              {user
+                ? 'Ta participation restera visible dans cette fiche pour suivre la soirée.'
+                : 'Connecte-toi plus tard pour retrouver facilement les soirées qui t’intéressent.'}
+            </div>
+          </div>
+
+          <button
+            onClick={handleToggleAttending}
+            style={{
               width: '100%',
               marginTop: 22,
-              background: event.bar.color,
+              background: attending ? 'var(--success)' : event.bar.color,
               color: '#fff',
               border: 'none',
               padding: 16,
@@ -267,10 +328,16 @@ const EventSheet = ({ event, onClose }) => {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-            }}>
-              Je participe
-            </button>
-            <button style={{
+              boxShadow: attending ? '0 10px 24px rgba(109,143,82,0.22)' : `0 10px 24px ${event.bar.color}33`,
+              transition: 'background 0.2s ease, box-shadow 0.2s ease',
+            }}
+          >
+            <Icon name={attending ? 'check' : 'plus'} size={16} color="#fff" />
+            {attending ? 'Participation confirmée' : 'Je participe'}
+          </button>
+          <button
+            onClick={handleShare}
+            style={{
               width: '100%',
               marginTop: 10,
               background: 'transparent',
@@ -282,10 +349,15 @@ const EventSheet = ({ event, onClose }) => {
               fontWeight: 600,
               fontFamily: 'inherit',
               cursor: 'pointer',
-            }}>
-              Partager à un groupe
-            </button>
-          </Wip>
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <Icon name="send" size={15} color="currentColor" />
+            {shareLabel}
+          </button>
         </div>
       </div>
     </div>
