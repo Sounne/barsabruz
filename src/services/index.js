@@ -20,6 +20,12 @@ const BAR_COORDINATES = {
 
 // ─────────── BARS ───────────
 
+export async function cleanupExpiredAgendaItems() {
+  const { data, error } = await supabase.rpc('cleanup_expired_agenda_items')
+  if (error) throw error
+  return data
+}
+
 export async function fetchBars() {
   const [{ data: bars, error: barsError }, { data: events, error: eventsError }] = await Promise.all([
     supabase.from('bars').select('*').order('rating', { ascending: false }),

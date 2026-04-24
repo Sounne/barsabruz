@@ -13,6 +13,7 @@ import {
   fetchAllEventParticipants, fetchJoinedEventIds,
   joinEvent as svcJoinEvent, unjoinEvent as svcUnjoinEvent,
   subscribeToBars, subscribeToEvents, subscribeToEventAttendees,
+  cleanupExpiredAgendaItems,
 } from '../services'
 import { getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe } from '../lib/chatApi'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
@@ -151,6 +152,26 @@ export function DataProvider({ children }) {
       .catch(() => setJoinedEventIds(new Set()))
   }, [user?.id])
 
+  const cleanupAndRefreshAgenda = React.useCallback(async () => {
+    const result = await cleanupExpiredAgendaItems()
+    const deletedCount = (result?.events_deleted ?? 0) + (result?.annonces_deleted ?? 0)
+    if (!deletedCount) return result
+
+    const [barsData, annoncesData] = await Promise.all([
+      fetchBars(),
+      fetchAnnonces(),
+    ])
+    const resolvedBars = barsData?.length ? barsData : BARS_DATA
+    const resolvedAnnonces = annoncesData ?? ANNONCES_PUBLIC
+    setBars(resolvedBars)
+    setAnnonces(resolvedAnnonces)
+    loadEventParticipants(resolvedBars)
+    loadParticipants(annoncesData ?? [])
+    refreshJoinedAnnonces()
+    refreshJoinedEvents()
+    return result
+  }, [loadEventParticipants, loadParticipants, refreshJoinedAnnonces, refreshJoinedEvents])
+
   React.useEffect(() => {
     skipNotificationWriteRef.current = true
     skipNotificationSettingsWriteRef.current = true
@@ -187,17 +208,18 @@ export function DataProvider({ children }) {
     let cancelled = false
     async function load() {
       try {
+        await cleanupExpiredAgendaItems().catch(() => {})
         const [barsData, annoncesData] = await Promise.all([
           fetchBars(),
           fetchAnnonces(),
         ])
         if (!cancelled) {
-          const resolvedAnnonces = annoncesData?.length ? annoncesData : ANNONCES_PUBLIC
+          const resolvedAnnonces = annoncesData ?? ANNONCES_PUBLIC
           const resolvedBars = barsData?.length ? barsData : BARS_DATA
           setBars(resolvedBars)
           setAnnonces(resolvedAnnonces)
           loadEventParticipants(resolvedBars)
-          if (annoncesData?.length) loadParticipants(annoncesData)
+          loadParticipants(annoncesData ?? [])
         }
       } catch (err) {
         console.warn('Supabase non disponible, données locales utilisées:', err.message)
@@ -220,7 +242,7 @@ export function DataProvider({ children }) {
       channel = subscribeToAnnonceParticipants(() => {
         fetchAnnonces()
           .then(data => {
-            if (data?.length) loadParticipants(data)
+            loadParticipants(data ?? [])
             refreshJoinedAnnonces()
           })
           .catch(() => {})
@@ -229,6 +251,13 @@ export function DataProvider({ children }) {
     return () => { if (channel) unsubscribeChannel(channel) }
   }, [loadParticipants, refreshJoinedAnnonces])
 
+  React.useEffect(() => {
+    const timer = window.setInterval(() => {
+      cleanupAndRefreshAgenda().catch(() => {})
+    }, 60000)
+    return () => window.clearInterval(timer)
+  }, [cleanupAndRefreshAgenda])
+
   // Real-time subscription to annonces (new sorties, count updates, deletions)
   React.useEffect(() => {
     let channel
@@ -236,11 +265,9 @@ export function DataProvider({ children }) {
       channel = subscribeToAnnonces(() => {
         fetchAnnonces()
           .then(data => {
-            if (data?.length) {
-              setAnnonces(data)
-              loadParticipants(data)
-              refreshJoinedAnnonces()
-            }
+            setAnnonces(data ?? [])
+            loadParticipants(data ?? [])
+            refreshJoinedAnnonces()
           })
           .catch(() => {})
       })

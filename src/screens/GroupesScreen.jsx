@@ -1120,6 +1120,7 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
         title: title.trim(),
         bar: selectedBar?.name ?? bar,
         when_text: whenText,
+        scheduled_at: selectedSortieDate.toISOString(),
         attending: 1,
         max_attending: maxAttending,
         type,
