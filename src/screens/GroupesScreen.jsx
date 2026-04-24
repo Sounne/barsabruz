@@ -883,7 +883,7 @@ const NewAnnonceSheet = ({ onClose, onGroupCreated }) => {
         </div>
 
         <div style={{ padding: 20 }}>
-          <div className="serif" style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.2 }}>Organise une sortie</div>
+          <div className="serif" style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.2 }}>Crée ton groupe</div>
           <div style={{ fontSize: 13, color: 'var(--ink-mute)', marginTop: 6 }}>Crée un groupe pour coordonner la soirée.</div>
 
           {!authUser && (
@@ -923,7 +923,7 @@ const NewAnnonceSheet = ({ onClose, onGroupCreated }) => {
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Ex. Anniv de Théo 🎂"
+              placeholder="Ex. La bande de l'Ostal 🍻"
               style={{ width: '100%', background: '#fff', border: 'none', padding: '14px', borderRadius: 12, fontSize: 15, fontFamily: 'inherit', outline: 'none', boxShadow: 'var(--shadow-card)', boxSizing: 'border-box' }}
             />
           </div>
