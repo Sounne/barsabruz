@@ -16,6 +16,75 @@ function fmtTime(iso) {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
+function fmtLongDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+const FriendStat = ({ icon, label, value }) => (
+  <div style={{
+    flex: 1,
+    minWidth: 0,
+    background: '#fff',
+    borderRadius: 14,
+    padding: '14px 12px',
+    boxShadow: 'var(--shadow-card)',
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--ink-mute)' }}>
+      <Icon name={icon} size={14} color="var(--ink-mute)"/>
+      <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {label}
+      </span>
+    </div>
+    <div className="serif" style={{ fontSize: 24, fontWeight: 600, marginTop: 10, lineHeight: 1 }}>
+      {value}
+    </div>
+  </div>
+)
+
+const FriendInfoRow = ({ icon, label, value }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: '12px 14px',
+    background: '#fff',
+    borderRadius: 14,
+    boxShadow: 'var(--shadow-card)',
+  }}>
+    <div style={{
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      background: 'rgba(198,93,61,0.1)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <Icon name={icon} size={15} color="var(--terracotta)"/>
+    </div>
+    <div style={{ minWidth: 0 }}>
+      <div style={{
+        fontSize: 11,
+        color: 'var(--ink-mute)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        fontWeight: 600,
+      }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 14, color: 'var(--ink)', marginTop: 3, lineHeight: 1.45 }}>
+        {value}
+      </div>
+    </div>
+  </div>
+)
+
 // ═══════════════ GROUP ROW ═══════════════
 
 const GroupRow = ({ group, onOpen, onJoin, joining }) => {
@@ -103,15 +172,18 @@ const GroupRow = ({ group, onOpen, onJoin, joining }) => {
 // ═══════════════ FRIEND PROFILE SHEET ═══════════════
 
 const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
+  const { bars } = useData()
+  const { user: authUser } = useAuth()
   const [profile, setProfile] = React.useState(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState('')
 
   React.useEffect(() => {
+    if (!authUser?.id) return
     let cancelled = false
     setLoading(true)
     setError('')
-    chatApi.getProfile(friend.id)
+    chatApi.getFriendProfileSummary(authUser.id, friend.id)
       .then(p => { if (!cancelled) setProfile(p) })
       .catch(() => { if (!cancelled) setError('Profil indisponible') })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -127,9 +199,15 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
       cancelled = true
       if (channel) chatApi.unsubscribe(channel)
     }
-  }, [friend.id])
+  }, [authUser?.id, friend.id])
 
   const display = profile || friend
+  const favoriteBars = (display.favorites ?? [])
+    .map(id => bars.find(bar => bar.id === id))
+    .filter(Boolean)
+  const sharedGroups = display.shared_groups ?? []
+  const latestSorties = display.latest_sorties ?? []
+  const hasDetails = !!display.bio || !!display.friendship_created_at || favoriteBars.length > 0 || sharedGroups.length > 0 || latestSorties.length > 0
 
   return (
     <>
@@ -142,6 +220,8 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
         background: 'var(--paper)', borderRadius: '24px 24px 0 0',
         padding: '0 20px 32px', zIndex: 190,
         maxWidth: 520, margin: '0 auto',
+        maxHeight: '88vh',
+        overflowY: 'auto',
         animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
         boxShadow: '0 -8px 40px rgba(42,31,23,0.14)',
       }}>
@@ -180,6 +260,157 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
           )}
           {error && !profile && (
             <div style={{ fontSize: 12, color: 'var(--terracotta)' }}>{error}</div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+          <FriendStat icon="users" label="Groupes en commun" value={sharedGroups.length}/>
+          <FriendStat icon="calendar" label="Sorties créées" value={display.created_sorties_count ?? 0}/>
+          <FriendStat icon="check" label="Participations" value={display.joined_sorties_count ?? 0}/>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {display.friendship_created_at && (
+            <FriendInfoRow
+              icon="heart"
+              label="Amis depuis"
+              value={fmtLongDate(display.friendship_created_at)}
+            />
+          )}
+
+          {favoriteBars.length > 0 && (
+            <div style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: '13px 14px',
+              boxShadow: 'var(--shadow-card)',
+            }}>
+              <div style={{
+                fontSize: 11,
+                color: 'var(--ink-mute)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 600,
+                marginBottom: 10,
+              }}>
+                Bars favoris
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {favoriteBars.map(bar => (
+                  <span key={bar.id} style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '7px 10px',
+                    borderRadius: 999,
+                    background: `${bar.color}14`,
+                    color: bar.color,
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}>
+                    <span>{bar.name}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sharedGroups.length > 0 && (
+            <div style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: '13px 14px',
+              boxShadow: 'var(--shadow-card)',
+            }}>
+              <div style={{
+                fontSize: 11,
+                color: 'var(--ink-mute)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 600,
+                marginBottom: 10,
+              }}>
+                Vos groupes
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {sharedGroups.slice(0, 3).map(group => (
+                  <div key={group.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 10,
+                      background: group.type === 'ephemeral'
+                        ? 'linear-gradient(135deg, #D9A44A, #E89579)'
+                        : 'linear-gradient(135deg, #C65D3D, #6B3A4A)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 16,
+                      flexShrink: 0,
+                    }}>
+                      {group.emoji}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{group.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
+                        {group.type === 'ephemeral' ? 'Groupe éphémère' : 'Groupe permanent'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {latestSorties.length > 0 && (
+            <div style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: '13px 14px',
+              boxShadow: 'var(--shadow-card)',
+            }}>
+              <div style={{
+                fontSize: 11,
+                color: 'var(--ink-mute)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 600,
+                marginBottom: 10,
+              }}>
+                Dernières sorties proposées
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {latestSorties.map(sortie => (
+                  <div key={sortie.id} style={{
+                    padding: '11px 12px',
+                    borderRadius: 12,
+                    background: 'rgba(42,31,23,0.035)',
+                  }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{sortie.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 3 }}>
+                      {sortie.bar} · {sortie.when}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 5 }}>
+                      {sortie.attending} / {sortie.maxAttending ?? sortie.attending} participant{sortie.attending !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && !hasDetails && (
+            <div style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: '14px',
+              boxShadow: 'var(--shadow-card)',
+              fontSize: 13,
+              color: 'var(--ink-mute)',
+              textAlign: 'center',
+            }}>
+              Pas plus d'infos publiques pour le moment.
+            </div>
           )}
         </div>
 

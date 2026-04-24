@@ -78,11 +78,70 @@ export function subscribeToFriendships(userId, callback) {
 export async function getProfile(userId) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, handle, avatar_letter, avatar_url, color, bio')
+    .select('id, name, handle, avatar_letter, avatar_url, color, bio, favorites')
     .eq('id', userId)
     .single()
   if (error) throw error
   return data
+}
+
+export async function getFriendProfileSummary(myId, friendId) {
+  const [
+    profile,
+    { data: friendship, error: friendshipError },
+    { data: sharedGroups, error: groupsError },
+    { data: createdSorties, error: createdSortiesError },
+    { count: joinedSortiesCount, error: joinedSortiesError },
+  ] = await Promise.all([
+    getProfile(friendId),
+    supabase
+      .from('friendships')
+      .select('created_at')
+      .eq('status', 'accepted')
+      .or(`and(requester.eq.${myId},addressee.eq.${friendId}),and(requester.eq.${friendId},addressee.eq.${myId})`)
+      .maybeSingle(),
+    supabase
+      .from('group_members')
+      .select('group_id, joined_at, group:group_chats(id, name, emoji, type)')
+      .eq('user_id', friendId)
+      .order('joined_at', { ascending: false }),
+    supabase
+      .from('annonces')
+      .select('id, title, bar, when_text, scheduled_at, attending, max_attending', { count: 'exact' })
+      .eq('user_id', friendId)
+      .order('scheduled_at', { ascending: false, nullsFirst: false })
+      .limit(3),
+    supabase
+      .from('annonce_participants')
+      .select('annonce_id', { count: 'exact', head: true })
+      .eq('user_id', friendId),
+  ])
+
+  if (friendshipError) throw friendshipError
+  if (groupsError) throw groupsError
+  if (createdSortiesError) throw createdSortiesError
+  if (joinedSortiesError) throw joinedSortiesError
+
+  return {
+    ...profile,
+    friendship_created_at: friendship?.created_at ?? null,
+    shared_groups: (sharedGroups ?? [])
+      .map(row => ({
+        id: row.group?.id ?? row.group_id,
+        name: row.group?.name ?? 'Groupe',
+        emoji: row.group?.emoji ?? '💬',
+        type: row.group?.type ?? 'permanent',
+        joined_at: row.joined_at,
+      }))
+      .filter(group => group.id),
+    created_sorties_count: createdSorties?.length ?? 0,
+    joined_sorties_count: joinedSortiesCount ?? 0,
+    latest_sorties: (createdSorties ?? []).map(sortie => ({
+      ...sortie,
+      when: sortie.when_text,
+      maxAttending: sortie.max_attending,
+    })),
+  }
 }
 
 export function subscribeToProfile(userId, callback) {
