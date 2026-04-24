@@ -18,3 +18,7 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local agent instructions / temp files
+AGENTS.md
+*.tmp
