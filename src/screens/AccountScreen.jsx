@@ -464,7 +464,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenBar, onOpenNotifications }) => {
             {
               icon: 'bell',
               label: 'Notifications',
-              detail: unreadNotificationCount > 0 ? `${unreadNotificationCount} non lue${unreadNotificationCount > 1 ? 's' : ''}` : (notificationSettings.browser ? 'Alertes actives' : 'Dans l app'),
+              detail: unreadNotificationCount > 0 ? `${unreadNotificationCount} non lue${unreadNotificationCount > 1 ? 's' : ''}` : (notificationSettings.browser ? 'Alertes actives' : ''),
               onClick: onOpenNotifications,
               active: true,
             },
