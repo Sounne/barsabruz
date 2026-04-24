@@ -14,7 +14,7 @@ const EVENT_ICONS = {
 }
 
 const AgendaScreen = ({ onOpenEvent }) => {
-  const { agendaEvents, agendaTags } = useData()
+  const { agendaEvents, agendaTags, eventParticipantsMap } = useData()
   const [filter, setFilter] = React.useState('all')
 
   const filteredEvents = filter === 'all'
@@ -126,7 +126,7 @@ const AgendaScreen = ({ onOpenEvent }) => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                       <span style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600 }}>{event.price}</span>
-                      <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{event.attending} intéressés</span>
+                      <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{eventParticipantsMap[event.id]?.length ?? event.attending} intéressés</span>
                     </div>
                   </div>
                 </div>

@@ -30,6 +30,17 @@ function updateEventInBars(list, eventId, updater) {
   }))
 }
 
+function syncBarsEventCounts(list, participantsMap) {
+  if (!participantsMap) return list ?? []
+  return (list ?? []).map(bar => ({
+    ...bar,
+    events: (bar.events ?? []).map(event => ({
+      ...event,
+      attending: participantsMap[event.id]?.length ?? 0,
+    })),
+  }))
+}
+
 export function DataProvider({ children }) {
   const { user } = useAuth()
   const [bars, setBars] = React.useState(null)
@@ -113,6 +124,7 @@ export function DataProvider({ children }) {
     try {
       const map = await fetchAllEventParticipants(ids)
       setEventParticipantsMap(map)
+      setBars(prev => syncBarsEventCounts(prev, map))
     } catch {}
   }, [])
 

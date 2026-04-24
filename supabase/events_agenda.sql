@@ -87,7 +87,6 @@ as $$
 declare
   v_user_id uuid := auth.uid();
   v_attending integer;
-  v_rows integer;
 begin
   if v_user_id is null then
     raise exception 'Authentication required';
@@ -97,18 +96,13 @@ begin
   values (p_event_id, v_user_id)
   on conflict do nothing;
 
-  get diagnostics v_rows = row_count;
+  select count(*)::integer into v_attending
+  from public.event_attendees
+  where event_id = p_event_id;
 
-  if v_rows > 0 then
-    update public.events
-    set attending = coalesce(attending, 0) + 1
-    where id = p_event_id
-    returning attending into v_attending;
-  else
-    select attending into v_attending
-    from public.events
-    where id = p_event_id;
-  end if;
+  update public.events
+  set attending = v_attending
+  where id = p_event_id;
 
   return coalesce(v_attending, 0);
 end;
@@ -123,7 +117,6 @@ as $$
 declare
   v_user_id uuid := auth.uid();
   v_attending integer;
-  v_rows integer;
 begin
   if v_user_id is null then
     raise exception 'Authentication required';
@@ -133,19 +126,24 @@ begin
   where event_id = p_event_id
     and user_id = v_user_id;
 
-  get diagnostics v_rows = row_count;
+  select count(*)::integer into v_attending
+  from public.event_attendees
+  where event_id = p_event_id;
 
-  if v_rows > 0 then
-    update public.events
-    set attending = greatest(coalesce(attending, 0) - 1, 0)
-    where id = p_event_id
-    returning attending into v_attending;
-  else
-    select attending into v_attending
-    from public.events
-    where id = p_event_id;
-  end if;
+  update public.events
+  set attending = v_attending
+  where id = p_event_id;
 
   return coalesce(v_attending, 0);
 end;
 $$;
+
+update public.events e
+set attending = counts.real_count
+from (
+  select e2.id, count(a.user_id)::integer as real_count
+  from public.events e2
+  left join public.event_attendees a on a.event_id = e2.id
+  group by e2.id
+) as counts
+where e.id = counts.id;
