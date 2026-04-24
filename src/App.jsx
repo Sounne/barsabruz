@@ -1,14 +1,52 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { Icon, Avatar } from './components/ui'
 import { useData } from './context/DataContext'
 import { useAuth } from './context/AuthContext'
 import { HomeScreen, DiscoverScreen, MapView, SortieDetailSheet } from './screens/HomeScreen'
-import { BarDetailScreen } from './screens/BarDetailScreen'
-import { AgendaScreen, EventSheet } from './screens/AgendaScreen'
-import { GroupesScreen, GroupChatScreen, DMChatScreen, NewAnnonceSheet, NewSortieSheet } from './screens/GroupesScreen'
-import { AccountScreen } from './screens/AccountScreen'
-import { AuthScreen } from './screens/AuthScreen'
-import { NotificationsSheet } from './screens/NotificationsSheet'
+
+const BarDetailScreen = React.lazy(() =>
+  import('./screens/BarDetailScreen').then((module) => ({ default: module.BarDetailScreen })),
+)
+
+const AgendaScreen = React.lazy(() =>
+  import('./screens/AgendaScreen').then((module) => ({ default: module.AgendaScreen })),
+)
+
+const EventSheet = React.lazy(() =>
+  import('./screens/AgendaScreen').then((module) => ({ default: module.EventSheet })),
+)
+
+const GroupesScreen = React.lazy(() =>
+  import('./screens/GroupesScreen').then((module) => ({ default: module.GroupesScreen })),
+)
+
+const GroupChatScreen = React.lazy(() =>
+  import('./screens/GroupesScreen').then((module) => ({ default: module.GroupChatScreen })),
+)
+
+const DMChatScreen = React.lazy(() =>
+  import('./screens/GroupesScreen').then((module) => ({ default: module.DMChatScreen })),
+)
+
+const NewAnnonceSheet = React.lazy(() =>
+  import('./screens/GroupesScreen').then((module) => ({ default: module.NewAnnonceSheet })),
+)
+
+const NewSortieSheet = React.lazy(() =>
+  import('./screens/GroupesScreen').then((module) => ({ default: module.NewSortieSheet })),
+)
+
+const AccountScreen = React.lazy(() =>
+  import('./screens/AccountScreen').then((module) => ({ default: module.AccountScreen })),
+)
+
+const AuthScreen = React.lazy(() =>
+  import('./screens/AuthScreen').then((module) => ({ default: module.AuthScreen })),
+)
+
+const NotificationsSheet = React.lazy(() =>
+  import('./screens/NotificationsSheet').then((module) => ({ default: module.NotificationsSheet })),
+)
 
 // ─────────── LOADING SPLASH ───────────
 const LoadingSplash = () => (
@@ -28,6 +66,12 @@ const LoadingSplash = () => (
       }}/>
     </div>
   </div>
+)
+
+const DeferredScreen = ({ children }) => (
+  <Suspense fallback={<LoadingSplash />}>
+    {children}
+  </Suspense>
 )
 
 const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
@@ -89,8 +133,25 @@ const App = () => {
     setSortieSheet(null)
   }
 
-  if (groupChat) return <GroupChatScreen group={groupChat} onBack={() => setGroupChat(null)} onDelete={() => { setGroupChat(null); setGroupsRefreshKey(k => k + 1) }}/>
-  if (dmChat) return <DMChatScreen friend={dmChat} onBack={() => setDmChat(null)}/>
+  if (groupChat) {
+    return (
+      <DeferredScreen>
+        <GroupChatScreen
+          group={groupChat}
+          onBack={() => setGroupChat(null)}
+          onDelete={() => { setGroupChat(null); setGroupsRefreshKey(k => k + 1) }}
+        />
+      </DeferredScreen>
+    )
+  }
+
+  if (dmChat) {
+    return (
+      <DeferredScreen>
+        <DMChatScreen friend={dmChat} onBack={() => setDmChat(null)} />
+      </DeferredScreen>
+    )
+  }
 
   return (
     <>
@@ -101,7 +162,9 @@ const App = () => {
         style={{ height: '100%', overflow: 'auto', paddingTop: 46 }}
       >
         {barId ? (
-          <BarDetailScreen barId={barId} onBack={() => setBarId(null)} onOpenEvent={navigate.openEvent} onNewAnnonce={() => setNewAnnonce(true)}/>
+          <DeferredScreen>
+            <BarDetailScreen barId={barId} onBack={() => setBarId(null)} onOpenEvent={navigate.openEvent} onNewAnnonce={() => setNewAnnonce(true)}/>
+          </DeferredScreen>
         ) : tab === 'home' ? (
           <HomeScreen {...{
             onOpenBar: navigate.openBar,
@@ -114,31 +177,45 @@ const App = () => {
         ) : tab === 'discover' ? (
           <DiscoverScreen onOpenBar={navigate.openBar}/>
         ) : tab === 'agenda' ? (
-          <AgendaScreen onOpenEvent={navigate.openEvent}/>
+          <DeferredScreen>
+            <AgendaScreen onOpenEvent={navigate.openEvent}/>
+          </DeferredScreen>
         ) : tab === 'groupes' ? (
-          <GroupesScreen onOpenGroup={navigate.openGroup} onOpenDM={navigate.openDM} onNew={() => setNewAnnonce(true)} refreshKey={groupsRefreshKey}/>
+          <DeferredScreen>
+            <GroupesScreen onOpenGroup={navigate.openGroup} onOpenDM={navigate.openDM} onNew={() => setNewAnnonce(true)} refreshKey={groupsRefreshKey}/>
+          </DeferredScreen>
         ) : session ? (
-          <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar} onOpenNotifications={navigate.openNotifications}/>
+          <DeferredScreen>
+            <AccountScreen onOpenAnnonce={navigate.openAnnonce} onOpenBar={navigate.openBar} onOpenNotifications={navigate.openNotifications}/>
+          </DeferredScreen>
         ) : (
-          <AuthScreen/>
+          <DeferredScreen>
+            <AuthScreen/>
+          </DeferredScreen>
         )}
       </div>
 
       {/* Event sheet */}
-      {eventSheet && <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>}
+      {eventSheet && (
+        <DeferredScreen>
+          <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>
+        </DeferredScreen>
+      )}
 
       {isLoggedIn && notificationsOpen && (
-        <NotificationsSheet
-          onClose={() => setNotificationsOpen(false)}
-          onOpenAnnonce={(annonce) => {
-            setNotificationsOpen(false)
-            navigate.openAnnonce(annonce)
-          }}
-          onOpenEvent={(event) => {
-            setNotificationsOpen(false)
-            navigate.openEvent(event)
-          }}
-        />
+        <DeferredScreen>
+          <NotificationsSheet
+            onClose={() => setNotificationsOpen(false)}
+            onOpenAnnonce={(annonce) => {
+              setNotificationsOpen(false)
+              navigate.openAnnonce(annonce)
+            }}
+            onOpenEvent={(event) => {
+              setNotificationsOpen(false)
+              navigate.openEvent(event)
+            }}
+          />
+        </DeferredScreen>
       )}
 
       {/* Sortie detail sheet (annonces from account) */}
@@ -157,10 +234,18 @@ const App = () => {
       )}
 
       {/* New group sheet */}
-      {newAnnonce && <NewAnnonceSheet onClose={() => setNewAnnonce(false)} onGroupCreated={() => setGroupsRefreshKey(k => k + 1)}/>}
+      {newAnnonce && (
+        <DeferredScreen>
+          <NewAnnonceSheet onClose={() => setNewAnnonce(false)} onGroupCreated={() => setGroupsRefreshKey(k => k + 1)}/>
+        </DeferredScreen>
+      )}
 
       {/* New sortie sheet */}
-      {newSortie && <NewSortieSheet onClose={() => setNewSortie(false)} onCreated={() => setNewSortie(false)}/>}
+      {newSortie && (
+        <DeferredScreen>
+          <NewSortieSheet onClose={() => setNewSortie(false)} onCreated={() => setNewSortie(false)}/>
+        </DeferredScreen>
+      )}
 
       {/* FAB for new sortie — on home */}
       {!barId && tab === 'home' && !eventSheet && !newSortie && !newAnnonce && (
