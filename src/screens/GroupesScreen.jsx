@@ -1037,6 +1037,27 @@ const SORTIE_TYPES = [
   { id: 'match', label: 'Match', emoji: '⚽', icon: 'flame' },
 ]
 
+const toDateInputValue = (value) => {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const toTimeInputValue = (value) => {
+  const hours = String(value.getHours()).padStart(2, '0')
+  const minutes = String(value.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+const getSelectedSortieDate = (dateValue, timeValue) => {
+  if (!dateValue || !timeValue) return null
+  const [year, month, day] = dateValue.split('-').map(Number)
+  const [hours, minutes] = timeValue.split(':').map(Number)
+  if ([year, month, day, hours, minutes].some(Number.isNaN)) return null
+  return new Date(year, month - 1, day, hours, minutes)
+}
+
 const NewSortieSheet = ({ onClose, onCreated }) => {
   const { bars: BARS_DATA, addAnnonce, profile } = useData()
   const { user: authUser } = useAuth()
@@ -1049,11 +1070,43 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
   const [visibility, setVisibility] = React.useState('private')
   const [submitting, setSubmitting] = React.useState(false)
   const [error, setError] = React.useState(null)
+  const [now, setNow] = React.useState(() => new Date())
 
-  const canPublish = authUser && title.trim() && date && !submitting
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const minDate = toDateInputValue(now)
+  const minTime = date === minDate ? toTimeInputValue(now) : undefined
+  const currentMinute = React.useMemo(() => {
+    const value = new Date(now)
+    value.setSeconds(0, 0)
+    return value
+  }, [now])
+  const selectedSortieDate = React.useMemo(() => getSelectedSortieDate(date, time), [date, time])
+  const isFutureSortie = !!selectedSortieDate && selectedSortieDate >= currentMinute
+  const dateTimeError = date && !isFutureSortie ? 'Choisis une date et une heure à venir.' : null
+
+  const canPublish = authUser && title.trim() && date && isFutureSortie && !submitting
+
+  const handleDateChange = (nextDate) => {
+    const safeDate = nextDate && nextDate < minDate ? minDate : nextDate
+    setDate(safeDate)
+    if (safeDate === minDate && time < toTimeInputValue(now)) {
+      setTime(toTimeInputValue(now))
+    }
+  }
+
+  const handleTimeChange = (nextTime) => {
+    setTime(date === minDate && nextTime < toTimeInputValue(now) ? toTimeInputValue(now) : nextTime)
+  }
 
   const handlePublish = async () => {
-    if (!canPublish) return
+    if (!canPublish) {
+      if (dateTimeError) setError(dateTimeError)
+      return
+    }
     setSubmitting(true)
     setError(null)
     const selectedBar = BARS_DATA.find(b => b.id === bar)
@@ -1183,7 +1236,8 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
               <input
                 type="date"
                 value={date}
-                onChange={e => setDate(e.target.value)}
+                min={minDate}
+                onChange={e => handleDateChange(e.target.value)}
                 style={{ width: '100%', background: '#fff', border: 'none', padding: '14px', borderRadius: 12, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxShadow: 'var(--shadow-card)', boxSizing: 'border-box' }}
               />
             </div>
@@ -1192,11 +1246,17 @@ const NewSortieSheet = ({ onClose, onCreated }) => {
               <input
                 type="time"
                 value={time}
-                onChange={e => setTime(e.target.value)}
+                min={minTime}
+                onChange={e => handleTimeChange(e.target.value)}
                 style={{ width: '100%', background: '#fff', border: 'none', padding: '14px', borderRadius: 12, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxShadow: 'var(--shadow-card)', boxSizing: 'border-box' }}
               />
             </div>
           </div>
+          {dateTimeError && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--terracotta)', fontWeight: 600 }}>
+              {dateTimeError}
+            </div>
+          )}
 
           {/* Max attendees */}
           <div style={{ marginTop: 20 }}>
