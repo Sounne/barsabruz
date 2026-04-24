@@ -383,7 +383,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
 
 // ═══════════════ HOME SCREEN ═══════════════
 const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab, onOpenNotifications }) => {
-  const { bars: allBars, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, invitations, acceptInvitation, declineInvitation, unreadNotificationCount } = useData()
+  const { bars: allBars, agendaEvents, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, invitations, acceptInvitation, declineInvitation, unreadNotificationCount } = useData()
   const { user: authUser } = useAuth()
   const [search, setSearch] = React.useState('')
   const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
@@ -419,8 +419,9 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
   const h = now.getHours();
   const greeting = h < 6 ? "Bonne nuit" : h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir";
 
-  // Aggregate upcoming events
-  const upcoming = bars.flatMap(b => b.events.map(e => ({...e, bar: b}))).slice(0, 5);
+  const upcoming = agendaEvents
+    .filter(event => bars.some(bar => bar.id === event.bar.id))
+    .slice(0, 5)
 
   return (
     <div style={{ paddingBottom: 100 }}>

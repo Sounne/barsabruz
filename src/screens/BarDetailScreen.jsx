@@ -2,12 +2,14 @@ import React from 'react'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 import { useData } from '../context/DataContext'
+import { getBarEvents } from '../utils/events'
 
 // Bar detail screen
 
 const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
   const { bars } = useData()
   const bar = bars.find(b => b.id === barId);
+  const upcomingEvents = React.useMemo(() => getBarEvents(bar ? [bar] : []), [bar]);
   const [fav, setFav] = React.useState(false);
   const now = useCurrentTime();
   const status = getBarStatus(bar, now);
@@ -200,7 +202,7 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
           <span style={{ fontSize: 12, color: bar.color, fontWeight: 600 }}>Voir tout</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {bar.events.map(ev => (
+          {upcomingEvents.map(ev => (
             <div key={ev.id} onClick={() => onOpenEvent({...ev, bar})}
               style={{
                 background: '#fff', borderRadius: 14, padding: 12,
@@ -226,6 +228,18 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
               </div>
             </div>
           ))}
+          {upcomingEvents.length === 0 && (
+            <div style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: 14,
+              boxShadow: 'var(--shadow-card)',
+              fontSize: 13,
+              color: 'var(--ink-mute)',
+            }}>
+              Aucune soirée annoncée pour le moment.
+            </div>
+          )}
         </div>
       </div>
     </div>

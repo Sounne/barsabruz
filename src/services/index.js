@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import ostalImg from '../assets/bars/ostal.jpg'
 import pignomImg from '../assets/bars/pignom.jpg'
 import arriereCourtImg from '../assets/bars/arriere-cour.jpg'
+import { normalizeBarEvent } from '../utils/events'
 
 const BAR_IMAGES = {
   ostal: ostalImg,
@@ -34,7 +35,7 @@ export async function fetchBars() {
     priceLevel: bar.pricelevel,
     coordinates: BAR_COORDINATES[bar.id],
     image: BAR_IMAGES[bar.id] ?? null,
-    events: (events ?? []).filter(e => e.bar_id === bar.id),
+    events: (events ?? []).filter(e => e.bar_id === bar.id).map(event => normalizeBarEvent(event, bar)),
   }))
 }
 

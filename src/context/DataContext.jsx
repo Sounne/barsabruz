@@ -14,6 +14,7 @@ import {
 import { getAccessibleGroups, getFriends } from '../lib/chatApi'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
+import { getBarEvents, getEventTags } from '../utils/events'
 
 const DataContext = React.createContext(null)
 
@@ -413,8 +414,7 @@ export function DataProvider({ children }) {
     }
 
     if (notificationSettings.events) {
-      ;(bars ?? BARS_DATA)
-        .flatMap(bar => (bar.events ?? []).map(event => ({ ...event, bar })))
+      getBarEvents(bars ?? BARS_DATA)
         .slice(0, 5)
         .forEach((event, index) => {
           items.push({
@@ -455,6 +455,16 @@ export function DataProvider({ children }) {
   const unreadNotificationCount = React.useMemo(
     () => notifications.filter(n => !n.read).length,
     [notifications]
+  )
+
+  const agendaEvents = React.useMemo(
+    () => getBarEvents(bars ?? BARS_DATA),
+    [bars]
+  )
+
+  const agendaTags = React.useMemo(
+    () => getEventTags(agendaEvents),
+    [agendaEvents]
   )
 
   React.useEffect(() => {
@@ -501,6 +511,8 @@ export function DataProvider({ children }) {
 
   const value = {
     bars: bars ?? BARS_DATA,
+    agendaEvents,
+    agendaTags,
     annonces: annonces ?? ANNONCES_PUBLIC,
     participantsMap,
     user: userData,
