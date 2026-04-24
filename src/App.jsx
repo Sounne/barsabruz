@@ -36,6 +36,7 @@ const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
 const App = () => {
   const { session, loading: authLoading } = useAuth()
   const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount } = useData()
+  const isLoggedIn = !!session?.user
   const [tab, setTab] = React.useState('home')
   const [slideDir, setSlideDir] = React.useState(null)
   const [barId, setBarId] = React.useState(null)
@@ -64,7 +65,10 @@ const App = () => {
     openGroup: (g) => setGroupChat(g),
     openDM: (friend) => setDmChat(friend),
     openAnnonce: (a) => setSortieSheet(a),
-    openNotifications: () => setNotificationsOpen(true),
+    openNotifications: () => {
+      if (!isLoggedIn) return
+      setNotificationsOpen(true)
+    },
   }
 
   const handleSortieJoin = () => {
@@ -123,7 +127,7 @@ const App = () => {
       {/* Event sheet */}
       {eventSheet && <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>}
 
-      {notificationsOpen && (
+      {isLoggedIn && notificationsOpen && (
         <NotificationsSheet
           onClose={() => setNotificationsOpen(false)}
           onOpenAnnonce={(annonce) => {
@@ -220,7 +224,7 @@ const App = () => {
                         transition: 'outline-color 0.2s',
                       }}
                     />
-                    {unreadNotificationCount > 0 && (
+                    {isLoggedIn && unreadNotificationCount > 0 && (
                       <span style={{
                         position: 'absolute',
                         top: -5,

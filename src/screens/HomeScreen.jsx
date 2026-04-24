@@ -432,7 +432,8 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
             Où allez-vous ce soir ?
           </div>
         </div>
-        <button onClick={onOpenNotifications} style={{
+        {authUser && (
+          <button onClick={onOpenNotifications} style={{
             width: 42, height: 42, borderRadius: '50%',
             background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow-card)', position: 'relative',
@@ -452,6 +453,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
               </span>
             )}
           </button>
+        )}
       </div>
 
       {/* Search */}

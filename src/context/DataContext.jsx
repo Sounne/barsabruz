@@ -343,6 +343,8 @@ export function DataProvider({ children }) {
   }, [user?.id])
 
   const notifications = React.useMemo(() => {
+    if (!user) return []
+
     const items = []
     const list = annonces ?? ANNONCES_PUBLIC
     const now = Date.now()
@@ -456,6 +458,7 @@ export function DataProvider({ children }) {
   )
 
   React.useEffect(() => {
+    if (!user) return
     if (!notificationSettings.browser || notificationPermission !== 'granted') return
     const latest = notifications.find(n => !n.read && ['invitation', 'participant'].includes(n.type))
     if (!latest) return
@@ -485,6 +488,7 @@ export function DataProvider({ children }) {
   }, [])
 
   const requestBrowserNotifications = React.useCallback(async () => {
+    if (!user) return 'unsupported'
     if (typeof Notification === 'undefined') {
       setNotificationPermission('unsupported')
       return 'unsupported'
@@ -493,7 +497,7 @@ export function DataProvider({ children }) {
     setNotificationPermission(permission)
     setNotificationSettings(prev => ({ ...prev, browser: permission === 'granted' }))
     return permission
-  }, [])
+  }, [user])
 
   const value = {
     bars: bars ?? BARS_DATA,
