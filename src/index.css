@@ -200,6 +200,60 @@ html, body {
 .noscroll::-webkit-scrollbar { display: none; }
 .noscroll { scrollbar-width: none; }
 
+.sheet {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  pointer-events: auto;
+}
+
+.sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(20, 14, 10, 0.34);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  animation: sheetBackdropIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sheet__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: calc(100% - 12px);
+  max-height: 900px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+  box-shadow: 0 -24px 60px rgba(42,31,23,0.24);
+  animation: sheetPanelIn 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, border-radius;
+}
+
+.bar-detail-sheet .sheet__panel {
+  height: calc(100% - 10px);
+}
+
+.sheet--closing {
+  pointer-events: none;
+}
+
+.sheet--closing .sheet__backdrop {
+  animation: sheetBackdropOut 0.24s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
+.sheet--closing .sheet__panel {
+  animation: sheetPanelOut 0.28s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
 /* Tweaks panel */
 .tweaks-panel {
   position: fixed;
@@ -270,6 +324,32 @@ html, body {
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes sheetBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sheetBackdropOut { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes sheetPanelIn {
+    from {
+      opacity: 0.86;
+      border-top-left-radius: 38px;
+      border-top-right-radius: 38px;
+      transform: translateY(100%) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      border-top-left-radius: 30px;
+      border-top-right-radius: 30px;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes sheetPanelOut {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0.9;
+      transform: translateY(100%) scale(0.99);
+    }
+  }
   @keyframes loadingBar { 0% { transform: translateX(-100%); } 50% { transform: translateX(0); } 100% { transform: translateX(100%); } }
   @keyframes pullRefreshSpin { to { transform: rotate(360deg); } }
   @keyframes tabSlideInRight { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: translateX(0); } }
@@ -277,3 +357,12 @@ html, body {
   .pull-refresh-spin { animation: pullRefreshSpin 0.8s linear infinite; }
   .tab-slide-right { animation: tabSlideInRight 0.24s cubic-bezier(0.4,0,0.2,1) both; }
   .tab-slide-left  { animation: tabSlideInLeft  0.24s cubic-bezier(0.4,0,0.2,1) both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sheet__backdrop,
+    .sheet__panel,
+    .sheet--closing .sheet__backdrop,
+    .sheet--closing .sheet__panel {
+      animation-duration: 0.01ms;
+    }
+  }

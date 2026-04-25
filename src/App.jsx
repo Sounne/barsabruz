@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react'
 import { Icon, Avatar } from './components/ui'
+import { Sheet } from './components/Sheet'
 import { useData } from './context/DataContext'
 import { useAuth } from './context/AuthContext'
 import { HomeScreen, DiscoverScreen, MapView, SortieDetailSheet } from './screens/HomeScreen'
@@ -91,6 +92,7 @@ const App = () => {
   const [socialTab, setSocialTab] = React.useState('groupes')
   const [slideDir, setSlideDir] = React.useState(null)
   const [barId, setBarId] = React.useState(null)
+  const [barSheetClosing, setBarSheetClosing] = React.useState(false)
   const [eventSheet, setEventSheet] = React.useState(null)
   const [groupChat, setGroupChat] = React.useState(null)
   const [dmChat, setDmChat] = React.useState(null)
@@ -172,10 +174,24 @@ const App = () => {
     setTab(newTab)
   }
 
+  const openBarSheet = React.useCallback((id) => {
+    setBarSheetClosing(false)
+    setBarId(id)
+  }, [])
+
+  const closeBarSheet = React.useCallback(() => {
+    setBarSheetClosing(true)
+  }, [])
+
+  const clearBarSheet = React.useCallback(() => {
+    setBarId(null)
+    setBarSheetClosing(false)
+  }, [])
+
   if (authLoading) return <LoadingSplash/>
 
   const navigate = {
-    openBar: (id) => setBarId(id),
+    openBar: openBarSheet,
     openEvent: (e) => setEventSheet(e),
     openGroup: (g) => setGroupChat(g),
     openDM: (friend) => setDmChat(friend),
@@ -251,11 +267,7 @@ const App = () => {
           transition: pullDistance === 0 || pullRefreshing ? 'transform 0.22s cubic-bezier(0.4,0,0.2,1)' : 'none',
         }}
       >
-        {barId ? (
-          <DeferredScreen>
-            <BarDetailScreen barId={barId} onBack={() => setBarId(null)} onOpenEvent={navigate.openEvent} onNewAnnonce={() => setNewAnnonce(true)}/>
-          </DeferredScreen>
-        ) : tab === 'home' ? (
+        {tab === 'home' ? (
           <HomeScreen {...{
             onOpenBar: navigate.openBar,
             onOpenEvent: navigate.openEvent,
@@ -295,6 +307,25 @@ const App = () => {
           </DeferredScreen>
         )}
       </div>
+
+      {barId && (
+        <Sheet
+          className="bar-detail-sheet"
+          label="Détail du bar"
+          closing={barSheetClosing}
+          onClose={closeBarSheet}
+          onExited={clearBarSheet}
+        >
+          <DeferredScreen>
+            <BarDetailScreen
+              barId={barId}
+              onBack={closeBarSheet}
+              onOpenEvent={navigate.openEvent}
+              onNewAnnonce={() => setNewAnnonce(true)}
+            />
+          </DeferredScreen>
+        </Sheet>
+      )}
 
       {(pullDistance > 0 || pullRefreshing) && (
         <div
