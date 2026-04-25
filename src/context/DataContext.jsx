@@ -17,7 +17,7 @@ import {
 } from '../services'
 import {
   getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe,
-  getSocialUnreadSummary, subscribeToSocialUnreadChanges,
+  getSocialUnreadSummary, markAllSocialMessagesRead, subscribeToSocialUnreadChanges,
 } from '../lib/chatApi'
 import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush, getPushPreferences, updatePushPreference } from '../lib/webPush'
 import { BARS_DATA } from '../data'
@@ -855,9 +855,21 @@ export function DataProvider({ children }) {
     setNotificationReadIds(prev => new Set([...prev, id]))
   }, [])
 
-  const markAllNotificationsRead = React.useCallback(() => {
+  const markAllNotificationsRead = React.useCallback(async () => {
     setNotificationReadIds(prev => new Set([...prev, ...notifications.map(n => n.id)]))
-  }, [notifications])
+    if (!user) return
+
+    await markAllSocialMessagesRead()
+
+    const [summary, groups, friendRows] = await Promise.all([
+      getSocialUnreadSummary(user.id),
+      getAccessibleGroups(user.id),
+      getFriends(user.id),
+    ])
+    setSocialUnread(summary)
+    setMyGroups(groups.filter(g => g.isMember))
+    setFriends(friendRows)
+  }, [notifications, user?.id])
 
   const dismissNotification = React.useCallback((id) => {
     setNotificationReadIds(prev => new Set([...prev, id]))

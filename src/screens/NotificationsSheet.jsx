@@ -189,6 +189,7 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
   const {
     notifications,
     unreadNotificationCount,
+    socialUnread,
     markAllNotificationsRead,
     notificationSettings,
     updateNotificationSetting,
@@ -199,6 +200,8 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
   } = useData()
   const [showSettings, setShowSettings] = React.useState(false)
   const [pushBusy, setPushBusy] = React.useState(false)
+  const [markingRead, setMarkingRead] = React.useState(false)
+  const totalUnreadCount = unreadNotificationCount + (socialUnread?.total ?? 0)
 
   const handleBrowserToggle = async (enabled) => {
     setPushBusy(true)
@@ -220,6 +223,15 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
     if (webPushStatus.subscribed) return 'Alertes actives meme quand l app est fermee'
     return 'Pour les invitations et participations importantes'
   })()
+
+  const handleMarkAllRead = async () => {
+    setMarkingRead(true)
+    try {
+      await markAllNotificationsRead()
+    } finally {
+      setMarkingRead(false)
+    }
+  }
 
   return (
     <div
@@ -258,8 +270,8 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
                 Notifications
               </div>
               <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 5 }}>
-                {unreadNotificationCount
-                  ? `${unreadNotificationCount} non lue${unreadNotificationCount > 1 ? 's' : ''}`
+                {totalUnreadCount
+                  ? `${totalUnreadCount} non lue${totalUnreadCount > 1 ? 's' : ''}`
                   : 'Tout est a jour'}
               </div>
             </div>
@@ -345,17 +357,18 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
             <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               Activite
             </div>
-            {unreadNotificationCount > 0 && (
-              <button onClick={markAllNotificationsRead} style={{
+            {totalUnreadCount > 0 && (
+              <button onClick={handleMarkAllRead} disabled={markingRead} style={{
                 border: 'none',
                 background: 'transparent',
                 color: 'var(--terracotta)',
                 fontSize: 12,
                 fontWeight: 700,
                 fontFamily: 'inherit',
-                cursor: 'pointer',
+                cursor: markingRead ? 'default' : 'pointer',
+                opacity: markingRead ? 0.55 : 1,
               }}>
-                Tout marquer lu
+                {markingRead ? 'Synchronisation...' : 'Tout marquer lu'}
               </button>
             )}
           </div>

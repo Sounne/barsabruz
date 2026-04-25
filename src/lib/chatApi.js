@@ -357,6 +357,12 @@ export async function markDirectMessagesRead(friendId) {
   return data
 }
 
+export async function markAllSocialMessagesRead() {
+  const { data, error } = await supabase.rpc('mark_all_social_messages_read')
+  if (error) throw error
+  return data
+}
+
 export async function getSocialUnreadSummary(userId) {
   const [{ data: groupRows, error: groupError }, { data: dmRows, error: dmError }] = await Promise.all([
     supabase.rpc('get_group_unread_counts', { p_user_id: userId }),
