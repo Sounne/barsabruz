@@ -20,11 +20,29 @@ import {
   getSocialUnreadSummary, subscribeToSocialUnreadChanges,
 } from '../lib/chatApi'
 import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush, getPushPreferences, updatePushPreference } from '../lib/webPush'
-import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
+import { BARS_DATA } from '../data'
 import { useAuth } from './AuthContext'
 import { getBarEvents, getEventTags } from '../utils/events'
 
 const DataContext = React.createContext(null)
+
+function fallbackUserData(authUser) {
+  const emailName = authUser?.email?.split('@')?.[0]
+  const name = authUser?.user_metadata?.name || emailName || 'Mon compte'
+  const avatar = (name?.[0] || authUser?.email?.[0] || '?').toUpperCase()
+
+  return {
+    name,
+    handle: emailName ? `@${emailName}` : '',
+    avatar,
+    avatarUrl: authUser?.user_metadata?.avatar_url || null,
+    color: '#C65D3D',
+    bio: '',
+    favorites: [],
+    sorties: [],
+    annonces: [],
+  }
+}
 
 function updateEventInBars(list, eventId, updater) {
   return (list ?? []).map(bar => ({
@@ -235,7 +253,7 @@ export function DataProvider({ children }) {
       fetchAnnonces(),
     ])
     const resolvedBars = barsData?.length ? barsData : BARS_DATA
-    const resolvedAnnonces = annoncesData ?? ANNONCES_PUBLIC
+    const resolvedAnnonces = annoncesData ?? []
     setBars(resolvedBars)
     applyAnnoncesSnapshot(resolvedAnnonces)
     loadEventParticipants(resolvedBars)
@@ -294,17 +312,17 @@ export function DataProvider({ children }) {
           fetchAnnonces(),
         ])
         if (!cancelled) {
-          const resolvedAnnonces = annoncesData ?? ANNONCES_PUBLIC
+          const resolvedAnnonces = annoncesData ?? []
           const resolvedBars = barsData?.length ? barsData : BARS_DATA
           setBars(resolvedBars)
           applyAnnoncesSnapshot(resolvedAnnonces)
           loadEventParticipants(resolvedBars)
         }
       } catch (err) {
-        console.warn('Supabase non disponible, données locales utilisées:', err.message)
+        console.warn('Supabase non disponible, catalogue local utilisé:', err.message)
         if (!cancelled) {
           setBars(BARS_DATA)
-          setAnnonces(ANNONCES_PUBLIC)
+          setAnnonces([])
           setEventParticipantsMap({})
         }
       } finally {
@@ -472,9 +490,9 @@ export function DataProvider({ children }) {
     color: profile.color || '#C65D3D',
     bio: profile.bio || '',
     favorites: profile.favorites ?? [],
-    sorties: USER_DATA.sorties,
-    annonces: USER_DATA.annonces,
-  } : USER_DATA
+    sorties: [],
+    annonces: [],
+  } : fallbackUserData(user)
 
   // Join — optimistic update, then RPC (falls back to simple increment)
   const joinAnnonce = React.useCallback(async (annonceId, currentAttending) => {
@@ -686,7 +704,7 @@ export function DataProvider({ children }) {
     if (!user) return []
 
     const items = []
-    const list = annonces ?? ANNONCES_PUBLIC
+    const list = annonces ?? []
     const now = Date.now()
 
     if (notificationSettings.invitations) {
@@ -887,7 +905,7 @@ export function DataProvider({ children }) {
     bars: bars ?? BARS_DATA,
     agendaEvents,
     agendaTags,
-    annonces: annonces ?? ANNONCES_PUBLIC,
+    annonces: annonces ?? [],
     participantsMap,
     eventParticipantsMap,
     user: userData,
