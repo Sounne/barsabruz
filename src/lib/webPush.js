@@ -94,6 +94,36 @@ export async function subscribeUserToPush(userId) {
   return { subscription, id: data?.id ?? null }
 }
 
+export async function getPushPreferences(userId) {
+  if (!userId) return null
+  const { data, error } = await supabase
+    .from('push_subscriptions')
+    .select('prefs')
+    .eq('user_id', userId)
+    .eq('enabled', true)
+    .limit(1)
+    .maybeSingle()
+  if (error) return null
+  return data?.prefs ?? null
+}
+
+export async function updatePushPreference(userId, key, value) {
+  if (!userId || !key) return
+  const { data: subs, error: fetchError } = await supabase
+    .from('push_subscriptions')
+    .select('id, prefs')
+    .eq('user_id', userId)
+    .eq('enabled', true)
+  if (fetchError) throw fetchError
+
+  await Promise.all((subs ?? []).map(sub =>
+    supabase
+      .from('push_subscriptions')
+      .update({ prefs: { ...(sub.prefs ?? {}), [key]: value } })
+      .eq('id', sub.id)
+  ))
+}
+
 export async function unsubscribeUserFromPush(userId) {
   if (!isWebPushSupported()) return
 

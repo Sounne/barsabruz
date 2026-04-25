@@ -3,19 +3,31 @@ import { supabase } from './supabase'
 // ─── FRIENDS ────────────────────────────────────────────────────────────────
 
 export async function getFriends(userId) {
-  const { data, error } = await supabase
-    .from('friendships')
-    .select(`
-      id, status, created_at,
-      requester_p:profiles!friendships_requester_fkey(id, name, handle, avatar_letter, avatar_url, color),
-      addressee_p:profiles!friendships_addressee_fkey(id, name, handle, avatar_letter, avatar_url, color)
-    `)
-    .eq('status', 'accepted')
-    .or(`requester.eq.${userId},addressee.eq.${userId}`)
+  const [{ data, error }, { data: unreadRows, error: unreadError }] = await Promise.all([
+    supabase
+      .from('friendships')
+      .select(`
+        id, status, created_at,
+        requester_p:profiles!friendships_requester_fkey(id, name, handle, avatar_letter, avatar_url, color),
+        addressee_p:profiles!friendships_addressee_fkey(id, name, handle, avatar_letter, avatar_url, color)
+      `)
+      .eq('status', 'accepted')
+      .or(`requester.eq.${userId},addressee.eq.${userId}`),
+    supabase.rpc('get_direct_unread_counts', { p_user_id: userId }),
+  ])
   if (error) throw error
-  return data.map(f => {
+  if (unreadError) throw unreadError
+  const unreadByFriend = new Map((unreadRows ?? []).map(row => [row.friend_id, row]))
+  return (data ?? []).map(f => {
     const friend = f.requester_p.id === userId ? f.addressee_p : f.requester_p
-    return { friendshipId: f.id, ...friend }
+    const unread = unreadByFriend.get(friend.id)
+    return {
+      friendshipId: f.id,
+      ...friend,
+      lastMsg: unread?.last_message_text ?? '',
+      time: unread?.last_message_at ? fmtTime(unread.last_message_at) : '',
+      unread: Number(unread?.unread_count ?? 0),
+    }
   })
 }
 
@@ -177,7 +189,7 @@ export async function deleteGroup(groupId) {
 }
 
 export async function getAccessibleGroups(userId) {
-  const [{ data: memberRows }, { data, error }] = await Promise.all([
+  const [{ data: memberRows }, { data, error }, { data: unreadRows, error: unreadError }] = await Promise.all([
     supabase.from('group_members').select('group_id').eq('user_id', userId),
     supabase
       .from('group_chats')
@@ -189,9 +201,12 @@ export async function getAccessibleGroups(userId) {
       .order('created_at', { referencedTable: 'group_messages', ascending: false })
       .limit(1, { referencedTable: 'group_messages' })
       .order('created_at', { ascending: false }),
+    supabase.rpc('get_group_unread_counts', { p_user_id: userId }),
   ])
   if (error) throw error
+  if (unreadError) throw unreadError
   const memberGroupIds = new Set((memberRows ?? []).map(r => r.group_id))
+  const unreadByGroup = new Map((unreadRows ?? []).map(row => [row.group_id, row]))
   return (data ?? []).map(g => ({
     id: g.id,
     name: g.name,
@@ -200,9 +215,11 @@ export async function getAccessibleGroups(userId) {
     visibility: g.visibility ?? 'private',
     expires_at: g.expires_at,
     members: g.members[0]?.count ?? 0,
-    lastMsg: g.last_message[0]?.text ?? '',
-    time: g.last_message[0] ? fmtTime(g.last_message[0].created_at) : '',
-    unread: 0,
+    lastMsg: unreadByGroup.get(g.id)?.last_message_text ?? g.last_message[0]?.text ?? '',
+    time: unreadByGroup.get(g.id)?.last_message_at
+      ? fmtTime(unreadByGroup.get(g.id).last_message_at)
+      : (g.last_message[0] ? fmtTime(g.last_message[0].created_at) : ''),
+    unread: Number(unreadByGroup.get(g.id)?.unread_count ?? 0),
     isMember: memberGroupIds.has(g.id),
     created_by: g.created_by,
   }))
@@ -283,6 +300,12 @@ export function subscribeToGroupMessages(groupId, callback) {
     .subscribe()
 }
 
+export async function markGroupMessagesRead(groupId) {
+  const { data, error } = await supabase.rpc('mark_group_messages_read', { p_group_id: groupId })
+  if (error) throw error
+  return data
+}
+
 // ─── DIRECT MESSAGES ────────────────────────────────────────────────────────
 
 export async function getDirectMessages(myId, friendId, limit = 50) {
@@ -325,6 +348,56 @@ export function subscribeToDirectMessages(myId, friendId, callback) {
         callback(msg)
       }
     })
+    .subscribe()
+}
+
+export async function markDirectMessagesRead(friendId) {
+  const { data, error } = await supabase.rpc('mark_direct_messages_read', { p_friend_id: friendId })
+  if (error) throw error
+  return data
+}
+
+export async function getSocialUnreadSummary(userId) {
+  const [{ data: groupRows, error: groupError }, { data: dmRows, error: dmError }] = await Promise.all([
+    supabase.rpc('get_group_unread_counts', { p_user_id: userId }),
+    supabase.rpc('get_direct_unread_counts', { p_user_id: userId }),
+  ])
+  if (groupError) throw groupError
+  if (dmError) throw dmError
+
+  const groups = (groupRows ?? []).reduce((sum, row) => sum + Number(row.unread_count ?? 0), 0)
+  const friends = (dmRows ?? []).reduce((sum, row) => sum + Number(row.unread_count ?? 0), 0)
+  return { groups, friends, total: groups + friends }
+}
+
+export function subscribeToSocialUnreadChanges(userId, callback) {
+  return supabase
+    .channel(`social-unread:${userId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'group_messages',
+    }, callback)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'direct_messages',
+    }, payload => {
+      const msg = payload.new
+      if (msg.sender_id === userId || msg.recipient_id === userId) callback(payload)
+    })
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'group_message_reads',
+      filter: `user_id=eq.${userId}`,
+    }, callback)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'direct_message_reads',
+      filter: `user_id=eq.${userId}`,
+    }, callback)
     .subscribe()
 }
 

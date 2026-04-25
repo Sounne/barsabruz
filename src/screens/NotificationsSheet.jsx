@@ -178,6 +178,7 @@ const NotificationRow = ({ notification, onOpenAnnonce, onOpenEvent }) => {
 }
 
 const settingRows = [
+  { key: 'messages', label: 'Messages', detail: 'DM et messages de groupe' },
   { key: 'invitations', label: 'Invitations de sortie', detail: 'Quand un ami te propose une soiree' },
   { key: 'participants', label: 'Participants', detail: 'Quand quelqu un rejoint une sortie creee' },
   { key: 'sorties', label: 'Nouvelles sorties', detail: 'Les sorties proposees autour de Bruz' },

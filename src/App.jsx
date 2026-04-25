@@ -79,7 +79,7 @@ const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
 // ─────────── MAIN APP ───────────
 const App = () => {
   const { session, loading: authLoading } = useAuth()
-  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount } = useData()
+  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount, socialUnread } = useData()
   const isLoggedIn = !!session?.user
   const [tab, setTab] = React.useState('home')
   const [socialTab, setSocialTab] = React.useState('groupes')
@@ -366,7 +366,27 @@ const App = () => {
                     )}
                   </span>
                 ) : (
-                  <Icon name={t.icon} size={22} color={tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)'} stroke={tab === t.id ? 2.2 : 1.7}/>
+                  <span style={{ position: 'relative', display: 'inline-flex' }}>
+                    <Icon name={t.icon} size={22} color={tab === t.id ? 'var(--terracotta)' : 'var(--ink-mute)'} stroke={tab === t.id ? 2.2 : 1.7}/>
+                    {isLoggedIn && t.id === 'groupes' && socialUnread?.total > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -8,
+                        minWidth: 15,
+                        height: 15,
+                        padding: '0 4px',
+                        borderRadius: 999,
+                        background: 'var(--terracotta)',
+                        color: '#fff',
+                        border: '2px solid var(--paper)',
+                        fontSize: 8,
+                        fontWeight: 800,
+                        lineHeight: '11px',
+                        textAlign: 'center',
+                      }}>{socialUnread.total > 9 ? '9+' : socialUnread.total}</span>
+                    )}
+                  </span>
                 )}
                 <span style={{
                   fontSize: 10, fontWeight: tab === t.id ? 600 : 500,

@@ -15,8 +15,11 @@ import {
   subscribeToBars, subscribeToEvents, subscribeToEventAttendees,
   cleanupExpiredAgendaItems,
 } from '../services'
-import { getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe } from '../lib/chatApi'
-import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush } from '../lib/webPush'
+import {
+  getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe,
+  getSocialUnreadSummary, subscribeToSocialUnreadChanges,
+} from '../lib/chatApi'
+import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush, getPushPreferences, updatePushPreference } from '../lib/webPush'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
 import { getBarEvents, getEventTags } from '../utils/events'
@@ -54,6 +57,7 @@ export function DataProvider({ children }) {
   const [joinedEventIds, setJoinedEventIds] = React.useState(new Set())
   const [myGroups, setMyGroups] = React.useState([])
   const [friends, setFriends] = React.useState([])
+  const [socialUnread, setSocialUnread] = React.useState({ groups: 0, friends: 0, total: 0 })
   const [invitations, setInvitations] = React.useState([])
   const [notificationReadIds, setNotificationReadIds] = React.useState(new Set())
   const [notificationDismissedIds, setNotificationDismissedIds] = React.useState(new Set())
@@ -62,6 +66,7 @@ export function DataProvider({ children }) {
     participants: true,
     sorties: true,
     events: true,
+    messages: true,
     browser: false,
   })
   const [notificationPermission, setNotificationPermission] = React.useState(
@@ -359,13 +364,16 @@ export function DataProvider({ children }) {
 
   // Load groups and friends when auth user changes
   React.useEffect(() => {
-    if (!user) { setMyGroups([]); setFriends([]); setInvitations([]); return }
+    if (!user) { setMyGroups([]); setFriends([]); setSocialUnread({ groups: 0, friends: 0, total: 0 }); setInvitations([]); return }
     getAccessibleGroups(user.id)
       .then(all => setMyGroups(all.filter(g => g.isMember)))
       .catch(() => {})
     getFriends(user.id)
       .then(setFriends)
       .catch(() => {})
+    getSocialUnreadSummary(user.id)
+      .then(setSocialUnread)
+      .catch(() => setSocialUnread({ groups: 0, friends: 0, total: 0 }))
     refreshInvitations()
   }, [user?.id])
 
@@ -381,6 +389,24 @@ export function DataProvider({ children }) {
       channel = subscribeToFriendships(user.id, refreshFriends)
     } catch {}
     return () => { if (channel) unsubscribe(channel) }
+  }, [user?.id])
+
+  React.useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const refreshUnread = () => {
+      getSocialUnreadSummary(user.id)
+        .then(summary => { if (!cancelled) setSocialUnread(summary) })
+        .catch(() => {})
+    }
+    let channel
+    try {
+      channel = subscribeToSocialUnreadChanges(user.id, refreshUnread)
+    } catch {}
+    return () => {
+      cancelled = true
+      if (channel) unsubscribe(channel)
+    }
   }, [user?.id])
 
   React.useEffect(() => {
@@ -746,9 +772,26 @@ export function DataProvider({ children }) {
     setNotificationDismissedIds(prev => new Set([...prev, id]))
   }, [])
 
+  const SERVER_PREF_KEYS = React.useMemo(() => new Set(['messages', 'invitations', 'participants', 'sorties', 'events']), [])
+
   const updateNotificationSetting = React.useCallback((key, value) => {
     setNotificationSettings(prev => ({ ...prev, [key]: value }))
-  }, [])
+    if (user && SERVER_PREF_KEYS.has(key)) {
+      updatePushPreference(user.id, key, value).catch(() => {})
+    }
+  }, [user?.id, SERVER_PREF_KEYS])
+
+  React.useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    getPushPreferences(user.id)
+      .then(prefs => {
+        if (cancelled || !prefs) return
+        setNotificationSettings(prev => ({ ...prev, ...prefs }))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [user?.id])
 
   const requestBrowserNotifications = React.useCallback(async () => {
     if (!user) return { permission: 'unsupported', subscribed: false }
@@ -811,6 +854,7 @@ export function DataProvider({ children }) {
     joinedEventIds,
     myGroups,
     friends,
+    socialUnread,
     invitations,
     notifications,
     unreadNotificationCount,

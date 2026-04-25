@@ -448,6 +448,7 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
 
 const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTab = 'groupes', onTabChange }) => {
   const { user: authUser } = useAuth()
+  const { socialUnread } = useData()
   const [mainTab, setMainTab] = React.useState(initialTab)
   const [groupFilter, setGroupFilter] = React.useState('all')
   const [groups, setGroups] = React.useState(null)
@@ -465,21 +466,42 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
   const [searching, setSearching] = React.useState(false)
   const [addedIds, setAddedIds] = React.useState(new Set())
 
-  React.useEffect(() => {
-    if (!authUser) { setGroups([]); return }
-    chatApi.getAccessibleGroups(authUser.id)
+  const refreshGroups = React.useCallback(() => {
+    if (!authUser) {
+      setGroups([])
+      return Promise.resolve()
+    }
+    return chatApi.getAccessibleGroups(authUser.id)
       .then(setGroups)
       .catch(() => setGroups([]))
-  }, [authUser?.id, refreshKey])
+  }, [authUser?.id])
+
+  const refreshFriends = React.useCallback(() => {
+    if (!authUser) {
+      setFriends([])
+      setPending([])
+      return Promise.resolve()
+    }
+    return Promise.all([chatApi.getFriends(authUser.id), chatApi.getPendingRequests(authUser.id)])
+      .then(([f, p]) => { setFriends(f); setPending(p) })
+      .catch(() => {})
+  }, [authUser?.id])
+
+  const refreshSocialLists = React.useCallback(() => (
+    Promise.all([refreshGroups(), refreshFriends()])
+  ), [refreshGroups, refreshFriends])
+
+  React.useEffect(() => {
+    if (!authUser) { setGroups([]); return }
+    refreshGroups()
+  }, [authUser?.id, refreshKey, refreshGroups])
 
   React.useEffect(() => {
     if (!authUser) return
     setFriendsLoading(true)
-    Promise.all([chatApi.getFriends(authUser.id), chatApi.getPendingRequests(authUser.id)])
-      .then(([f, p]) => { setFriends(f); setPending(p) })
-      .catch(() => {})
+    refreshFriends()
       .finally(() => setFriendsLoading(false))
-  }, [authUser?.id])
+  }, [authUser?.id, refreshFriends])
 
   React.useEffect(() => {
     setMainTab(initialTab)
@@ -491,12 +513,6 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
 
   React.useEffect(() => {
     if (!authUser) return
-    const refreshFriends = () => {
-      Promise.all([chatApi.getFriends(authUser.id), chatApi.getPendingRequests(authUser.id)])
-        .then(([f, p]) => { setFriends(f); setPending(p) })
-        .catch(() => {})
-    }
-
     let channel
     try {
       channel = chatApi.subscribeToFriendships(authUser.id, refreshFriends)
@@ -505,7 +521,19 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
     return () => {
       if (channel) chatApi.unsubscribe(channel)
     }
-  }, [authUser?.id])
+  }, [authUser?.id, refreshFriends])
+
+  React.useEffect(() => {
+    if (!authUser) return
+    let channel
+    try {
+      channel = chatApi.subscribeToSocialUnreadChanges(authUser.id, refreshSocialLists)
+    } catch {}
+
+    return () => {
+      if (channel) chatApi.unsubscribe(channel)
+    }
+  }, [authUser?.id, refreshSocialLists])
 
   React.useEffect(() => {
     if (!searchQuery.trim() || searchQuery.length < 2) { setSearchResults([]); return }
@@ -601,16 +629,37 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
       {/* Main tabs */}
       <div style={{ padding: '0 20px 14px', display: 'flex', gap: 8 }}>
         {[
-          { id: 'groupes', label: 'Groupes' },
-          { id: 'amis', label: pending.length ? `Amis · ${pending.length}` : 'Amis' },
+          { id: 'groupes', label: 'Groupes', unread: socialUnread?.groups ?? 0 },
+          { id: 'amis', label: pending.length ? `Amis · ${pending.length}` : 'Amis', unread: socialUnread?.friends ?? 0 },
         ].map(t => (
           <button key={t.id} onClick={() => setMainTab(t.id)} style={{
+            position: 'relative',
             padding: '8px 20px', borderRadius: 999,
             background: mainTab === t.id ? 'var(--ink)' : '#fff',
             color: mainTab === t.id ? '#fff' : 'var(--ink-soft)',
             border: mainTab === t.id ? 'none' : '1px solid var(--line)',
             fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
-          }}>{t.label}</button>
+          }}>
+            {t.label}
+            {t.unread > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: -5,
+                right: -5,
+                minWidth: 17,
+                height: 17,
+                padding: '0 5px',
+                borderRadius: 999,
+                background: 'var(--terracotta)',
+                color: '#fff',
+                border: '2px solid var(--paper)',
+                fontSize: 9,
+                fontWeight: 800,
+                lineHeight: '13px',
+                textAlign: 'center',
+              }}>{t.unread > 9 ? '9+' : t.unread}</span>
+            )}
+          </button>
         ))}
       </div>
 
@@ -804,11 +853,39 @@ const GroupesScreen = ({ onOpenGroup, onOpenDM, onNew, refreshKey = 0, initialTa
                   boxShadow: 'var(--shadow-card)', cursor: 'pointer',
                 }}>
                   <Avatar letter={friend.avatar_letter} src={friend.avatar_url} color={friend.color} size={40}/>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{friend.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{friend.handle}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{friend.name}</div>
+                      {friend.unread > 0 && (
+                        <span style={{
+                          minWidth: 18,
+                          height: 18,
+                          padding: '0 6px',
+                          borderRadius: 999,
+                          background: 'var(--terracotta)',
+                          color: '#fff',
+                          fontSize: 10,
+                          fontWeight: 800,
+                          lineHeight: '18px',
+                          textAlign: 'center',
+                        }}>{friend.unread > 9 ? '9+' : friend.unread}</span>
+                      )}
+                    </div>
+                    <div style={{
+                      fontSize: 12,
+                      color: friend.unread > 0 ? 'var(--ink)' : 'var(--ink-mute)',
+                      fontWeight: friend.unread > 0 ? 600 : 400,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {friend.lastMsg || friend.handle}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {friend.time && (
+                      <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginRight: 2 }}>{friend.time}</div>
+                    )}
                     <div onClick={e => { e.stopPropagation(); onOpenDM(friend) }} style={{
                       width: 34, height: 34, borderRadius: '50%',
                       background: 'rgba(198,93,61,0.1)',
@@ -948,6 +1025,11 @@ const GroupChatScreen = ({ group, onBack, onDelete }) => {
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages?.length])
+
+  React.useEffect(() => {
+    if (!authUser || messages === null) return
+    chatApi.markGroupMessagesRead(group.id).catch(() => {})
+  }, [authUser?.id, group.id, messages?.length])
 
   const send = async () => {
     if (!input.trim() || !authUser) return
@@ -1133,6 +1215,11 @@ const DMChatScreen = ({ friend, onBack }) => {
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length])
+
+  React.useEffect(() => {
+    if (!authUser) return
+    chatApi.markDirectMessagesRead(friend.id).catch(() => {})
+  }, [authUser?.id, friend.id, messages.length])
 
   const send = async () => {
     if (!input.trim() || !authUser) return

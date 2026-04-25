@@ -10,7 +10,11 @@ declare
     'event_attendees',
     'annonces',
     'annonce_participants',
-    'annonce_invitations'
+    'annonce_invitations',
+    'profiles',
+    'friendships',
+    'group_message_reads',
+    'direct_message_reads'
   ];
 begin
   foreach realtime_table in array realtime_tables loop

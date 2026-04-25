@@ -3,7 +3,7 @@ import webpush from 'npm:web-push@3.6.7'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-push-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -11,16 +11,14 @@ type PushSubscriptionRow = {
   id: string
   user_id: string
   endpoint: string
-  keys: {
-    p256dh: string
-    auth: string
-  }
+  keys: { p256dh: string; auth: string }
 }
 
 type RequestBody = {
   userIds?: string[]
   subscriptionIds?: string[]
   audience?: 'all'
+  prefKey?: string
   notification: {
     title: string
     body?: string
@@ -79,7 +77,7 @@ Deno.serve(async (req) => {
 
   let query = supabase
     .from('push_subscriptions')
-    .select('id, user_id, endpoint, keys')
+    .select('id, user_id, endpoint, keys, prefs')
     .eq('enabled', true)
 
   if (body.subscriptionIds?.length) {
@@ -91,6 +89,10 @@ Deno.serve(async (req) => {
   const { data: subscriptions, error } = await query
   if (error) return jsonResponse({ error: error.message }, 500)
 
+  const filteredSubs = body.prefKey
+    ? (subscriptions ?? []).filter((s: any) => s.prefs?.[body.prefKey!] !== false)
+    : (subscriptions ?? [])
+
   const payload = JSON.stringify({
     title: body.notification.title,
     body: body.notification.body,
@@ -101,12 +103,9 @@ Deno.serve(async (req) => {
     data: body.notification.data || {},
   })
 
-  const results = await Promise.allSettled((subscriptions as PushSubscriptionRow[]).map(async (sub) => {
+  const results = await Promise.allSettled((filteredSubs as PushSubscriptionRow[]).map(async (sub) => {
     try {
-      await webpush.sendNotification({
-        endpoint: sub.endpoint,
-        keys: sub.keys,
-      }, payload)
+      await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload)
       return { id: sub.id, ok: true }
     } catch (err) {
       const statusCode = typeof err === 'object' && err && 'statusCode' in err
@@ -129,13 +128,14 @@ Deno.serve(async (req) => {
     }
   }))
 
-  const sent = results.filter((result) => result.status === 'fulfilled' && result.value.ok).length
+  const sent = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length
   const failed = results.length - sent
 
   return jsonResponse({
     sent,
     failed,
     total: results.length,
-    results: results.map((result) => result.status === 'fulfilled' ? result.value : { ok: false, error: result.reason }),
+    skippedByPref: (subscriptions?.length ?? 0) - filteredSubs.length,
+    results: results.map((r) => r.status === 'fulfilled' ? r.value : { ok: false, error: r.reason }),
   })
 })
