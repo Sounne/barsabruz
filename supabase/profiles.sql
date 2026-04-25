@@ -6,7 +6,6 @@ create table if not exists public.profiles (
   bio           text,
   color         text not null default '#C65D3D',
   avatar_letter text not null default 'E',
-  favorites     text[] not null default '{}',
   created_at    timestamptz not null default now()
 );
 

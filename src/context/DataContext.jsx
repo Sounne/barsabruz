@@ -38,7 +38,6 @@ function fallbackUserData(authUser) {
     avatarUrl: authUser?.user_metadata?.avatar_url || null,
     color: '#C65D3D',
     bio: '',
-    favorites: [],
     sorties: [],
     annonces: [],
   }
@@ -515,7 +514,6 @@ export function DataProvider({ children }) {
     avatarUrl: profile.avatar_url || null,
     color: profile.color || '#C65D3D',
     bio: profile.bio || '',
-    favorites: profile.favorites ?? [],
     sorties: [],
     annonces: [],
   } : fallbackUserData(user)

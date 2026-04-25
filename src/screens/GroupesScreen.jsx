@@ -172,7 +172,6 @@ const GroupRow = ({ group, onOpen, onJoin, joining }) => {
 // ═══════════════ FRIEND PROFILE SHEET ═══════════════
 
 const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
-  const { bars } = useData()
   const { user: authUser } = useAuth()
   const [profile, setProfile] = React.useState(null)
   const [loading, setLoading] = React.useState(true)
@@ -202,12 +201,9 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
   }, [authUser?.id, friend.id])
 
   const display = profile || friend
-  const favoriteBars = (display.favorites ?? [])
-    .map(id => bars.find(bar => bar.id === id))
-    .filter(Boolean)
   const sharedGroups = display.shared_groups ?? []
   const latestSorties = display.latest_sorties ?? []
-  const hasDetails = !!display.bio || !!display.friendship_created_at || favoriteBars.length > 0 || sharedGroups.length > 0 || latestSorties.length > 0
+  const hasDetails = !!display.bio || !!display.friendship_created_at || sharedGroups.length > 0 || latestSorties.length > 0
 
   return (
     <>
@@ -277,43 +273,6 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
               label="Amis depuis"
               value={fmtLongDate(display.friendship_created_at)}
             />
-          )}
-
-          {favoriteBars.length > 0 && (
-            <div style={{
-              background: '#fff',
-              borderRadius: 14,
-              padding: '13px 14px',
-              boxShadow: 'var(--shadow-card)',
-            }}>
-              <div style={{
-                fontSize: 11,
-                color: 'var(--ink-mute)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                fontWeight: 600,
-                marginBottom: 10,
-              }}>
-                Bars favoris
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {favoriteBars.map(bar => (
-                  <span key={bar.id} style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '7px 10px',
-                    borderRadius: 999,
-                    background: `${bar.color}14`,
-                    color: bar.color,
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}>
-                    <span>{bar.name}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
           )}
 
           {sharedGroups.length > 0 && (

@@ -179,7 +179,6 @@ const EditProfileSheet = ({ user, onSave, onClose, authUserId }) => {
   )
 }
 
-// ─────────── FAVORITE BAR CARD ───────────
 // ─────────── SORTIE ROW ───────────
 const SortieRow = ({ sortie, bar, onOpen }) => (
   <div onClick={() => onOpen?.(bar?.id)}

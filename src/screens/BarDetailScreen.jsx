@@ -10,7 +10,6 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
   const { bars } = useData()
   const bar = bars.find(b => b.id === barId);
   const upcomingEvents = React.useMemo(() => getBarEvents(bar ? [bar] : []), [bar]);
-  const [fav, setFav] = React.useState(false);
   const now = useCurrentTime();
   const status = getBarStatus(bar, now);
   const days = [
@@ -38,19 +37,6 @@ const BarDetailScreen = ({ barId, onBack, onOpenEvent, onNewAnnonce }) => {
         }}>
           <Icon name="back" size={20} color="var(--ink)"/>
         </button>
-        <div style={{
-          position: 'absolute', top: 54, right: 16, display: 'flex', gap: 8,
-        }}>
-          <button onClick={() => setFav(!fav)} style={{
-            width: 40, height: 40, borderRadius: '50%',
-            background: fav ? 'var(--terracotta)' : 'rgba(255,255,255,0.95)', border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)', cursor: 'pointer',
-            transition: 'background 0.2s',
-          }}>
-            <Icon name="heart" size={18} color={fav ? '#fff' : 'var(--ink)'}/>
-          </button>
-        </div>
       </div>
 
       {/* Info card */}

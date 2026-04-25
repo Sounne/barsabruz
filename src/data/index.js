@@ -101,7 +101,6 @@ export const USER_DATA = {
   avatar: 'E',
   color: '#C65D3D',
   bio: 'Amateur de bières artisanales & cocktails. Bruz',
-  favorites: ['ostal', 'arriere-cour'],
   sorties: [
     { id: 's1', title: 'Soirée dégustation vins du Languedoc', bar: "L'Ostal", barId: 'ostal', date: 'Ven. 18 avr.', time: '19:30', with: 4 },
     { id: 's2', title: 'Quiz spécial 90s', bar: 'Le Pignom', barId: 'pignom', date: 'Mer. 9 avr.', time: '21:00', with: 3 },

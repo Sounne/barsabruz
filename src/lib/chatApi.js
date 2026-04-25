@@ -90,7 +90,7 @@ export function subscribeToFriendships(userId, callback) {
 export async function getProfile(userId) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, handle, avatar_letter, avatar_url, color, bio, favorites')
+    .select('id, name, handle, avatar_letter, avatar_url, color, bio')
     .eq('id', userId)
     .single()
   if (error) throw error
