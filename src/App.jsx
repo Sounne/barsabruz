@@ -79,7 +79,7 @@ const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
 // ─────────── MAIN APP ───────────
 const App = () => {
   const { session, loading: authLoading } = useAuth()
-  const { bars, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount, socialUnread } = useData()
+  const { bars, annonces, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount, socialUnread } = useData()
   const isLoggedIn = !!session?.user
   const [tab, setTab] = React.useState('home')
   const [socialTab, setSocialTab] = React.useState('groupes')
@@ -93,6 +93,16 @@ const App = () => {
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
   const [sortieSheet, setSortieSheet] = React.useState(null)
   const [notificationsOpen, setNotificationsOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!sortieSheet) return
+    const current = annonces.find(a => a.id === sortieSheet.id)
+    if (!current) {
+      setSortieSheet(null)
+      return
+    }
+    setSortieSheet(current)
+  }, [annonces, sortieSheet?.id])
 
   const handleTabChange = (newTab) => {
     if (newTab === tab) return

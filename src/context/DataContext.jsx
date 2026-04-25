@@ -46,6 +46,19 @@ function syncBarsEventCounts(list, participantsMap) {
   }))
 }
 
+function removeAnnonceParticipants(map, annonceId) {
+  if (!map?.[annonceId]) return map ?? {}
+  const { [annonceId]: _removed, ...next } = map
+  return next
+}
+
+function notificationBelongsToAnnonce(notificationId, annonceId) {
+  return (
+    notificationId === `sortie:${annonceId}` ||
+    notificationId.startsWith(`participant:${annonceId}:`)
+  )
+}
+
 export function DataProvider({ children }) {
   const { user } = useAuth()
   const [bars, setBars] = React.useState(null)
@@ -181,6 +194,37 @@ export function DataProvider({ children }) {
       .catch(() => setJoinedEventIds(new Set()))
   }, [user?.id])
 
+  const removeAnnonceEverywhere = React.useCallback((annonceId) => {
+    if (!annonceId) return
+
+    setAnnonces(prev => (prev ?? []).filter(a => a.id !== annonceId))
+    setParticipantsMap(prev => removeAnnonceParticipants(prev, annonceId))
+    setMyJoins(prev => {
+      if (!prev.has(annonceId)) return prev
+      const next = new Set(prev)
+      next.delete(annonceId)
+      return next
+    })
+    setInvitations(prev => prev.filter(inv => inv.annonce?.id !== annonceId))
+    setNotificationReadIds(prev => new Set([...prev].filter(id => !notificationBelongsToAnnonce(id, annonceId))))
+    setNotificationDismissedIds(prev => new Set([...prev].filter(id => !notificationBelongsToAnnonce(id, annonceId))))
+  }, [])
+
+  const applyAnnoncesSnapshot = React.useCallback((data) => {
+    const next = data ?? []
+    const activeIds = new Set(next.map(a => a.id))
+
+    setAnnonces(next)
+    setParticipantsMap(prev => (
+      Object.fromEntries(Object.entries(prev ?? {}).filter(([id]) => activeIds.has(id)))
+    ))
+    setMyJoins(prev => new Set([...prev].filter(id => activeIds.has(id))))
+    setInvitations(prev => prev.filter(inv => activeIds.has(inv.annonce?.id)))
+    loadParticipants(next)
+    refreshJoinedAnnonces()
+    refreshInvitations()
+  }, [loadParticipants, refreshInvitations, refreshJoinedAnnonces])
+
   const cleanupAndRefreshAgenda = React.useCallback(async () => {
     const result = await cleanupExpiredAgendaItems()
     const deletedCount = (result?.events_deleted ?? 0) + (result?.annonces_deleted ?? 0)
@@ -193,13 +237,12 @@ export function DataProvider({ children }) {
     const resolvedBars = barsData?.length ? barsData : BARS_DATA
     const resolvedAnnonces = annoncesData ?? ANNONCES_PUBLIC
     setBars(resolvedBars)
-    setAnnonces(resolvedAnnonces)
+    applyAnnoncesSnapshot(resolvedAnnonces)
     loadEventParticipants(resolvedBars)
-    loadParticipants(annoncesData ?? [])
     refreshJoinedAnnonces()
     refreshJoinedEvents()
     return result
-  }, [loadEventParticipants, loadParticipants, refreshJoinedAnnonces, refreshJoinedEvents])
+  }, [applyAnnoncesSnapshot, loadEventParticipants, refreshJoinedAnnonces, refreshJoinedEvents])
 
   React.useEffect(() => {
     skipNotificationWriteRef.current = true
@@ -254,9 +297,8 @@ export function DataProvider({ children }) {
           const resolvedAnnonces = annoncesData ?? ANNONCES_PUBLIC
           const resolvedBars = barsData?.length ? barsData : BARS_DATA
           setBars(resolvedBars)
-          setAnnonces(resolvedAnnonces)
+          applyAnnoncesSnapshot(resolvedAnnonces)
           loadEventParticipants(resolvedBars)
-          loadParticipants(annoncesData ?? [])
         }
       } catch (err) {
         console.warn('Supabase non disponible, données locales utilisées:', err.message)
@@ -271,22 +313,19 @@ export function DataProvider({ children }) {
     }
     load()
     return () => { cancelled = true }
-  }, [loadEventParticipants, loadParticipants])
+  }, [applyAnnoncesSnapshot, loadEventParticipants])
 
   React.useEffect(() => {
     let channel
     try {
       channel = subscribeToAnnonceParticipants(() => {
         fetchAnnonces()
-          .then(data => {
-            loadParticipants(data ?? [])
-            refreshJoinedAnnonces()
-          })
+          .then(data => applyAnnoncesSnapshot(data ?? []))
           .catch(() => {})
       })
     } catch {}
     return () => { if (channel) unsubscribeChannel(channel) }
-  }, [loadParticipants, refreshJoinedAnnonces])
+  }, [applyAnnoncesSnapshot])
 
   React.useEffect(() => {
     const timer = window.setInterval(() => {
@@ -299,18 +338,18 @@ export function DataProvider({ children }) {
   React.useEffect(() => {
     let channel
     try {
-      channel = subscribeToAnnonces(() => {
+      channel = subscribeToAnnonces((payload) => {
+        if (payload?.eventType === 'DELETE') {
+          removeAnnonceEverywhere(payload.old?.id)
+        }
+
         fetchAnnonces()
-          .then(data => {
-            setAnnonces(data ?? [])
-            loadParticipants(data ?? [])
-            refreshJoinedAnnonces()
-          })
+          .then(data => applyAnnoncesSnapshot(data ?? []))
           .catch(() => {})
       })
     } catch {}
     return () => { if (channel) unsubscribeChannel(channel) }
-  }, [loadParticipants, refreshJoinedAnnonces])
+  }, [applyAnnoncesSnapshot, removeAnnonceEverywhere])
 
   React.useEffect(() => {
     const refreshEvents = () => {
@@ -496,12 +535,20 @@ export function DataProvider({ children }) {
 
   // Delete own annonce — optimistic removal
   const deleteAnnonce = React.useCallback(async (annonceId) => {
-    setAnnonces(prev => (prev ?? []).filter(a => a.id !== annonceId))
-    setMyJoins(prev => { const n = new Set(prev); n.delete(annonceId); return n })
+    removeAnnonceEverywhere(annonceId)
     try {
       await svcDeleteAnnonce(annonceId)
-    } catch {}
-  }, [])
+      await Promise.all([
+        fetchAnnonces().then(data => applyAnnoncesSnapshot(data ?? [])),
+        refreshInvitations(),
+      ])
+    } catch (err) {
+      console.error(err)
+      fetchAnnonces()
+        .then(data => applyAnnoncesSnapshot(data ?? []))
+        .catch(() => {})
+    }
+  }, [applyAnnoncesSnapshot, refreshInvitations, removeAnnonceEverywhere])
 
   const addAnnonce = React.useCallback((annonce) => {
     setAnnonces(prev => [annonce, ...(prev ?? [])])
@@ -643,7 +690,9 @@ export function DataProvider({ children }) {
     const now = Date.now()
 
     if (notificationSettings.invitations) {
-      invitations.forEach(inv => {
+      invitations
+        .filter(inv => list.some(a => a.id === inv.annonce?.id))
+        .forEach(inv => {
         items.push({
           id: `invitation:${inv.invitationId}`,
           type: 'invitation',

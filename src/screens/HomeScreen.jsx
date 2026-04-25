@@ -388,6 +388,12 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
   const [search, setSearch] = React.useState('')
   const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
 
+  React.useEffect(() => {
+    if (!selectedAnnonce) return
+    const current = publics.find(a => a.id === selectedAnnonce.id)
+    setSelectedAnnonce(current ?? null)
+  }, [publics, selectedAnnonce?.id])
+
   const handleJoin = (annonceId, currentAttending) => {
     const a = publics.find(x => x.id === annonceId)
     const participantCount = getParticipantCount(a?.attending ?? 0, (participantsMap[annonceId] ?? []).length)
