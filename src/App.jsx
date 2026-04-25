@@ -75,11 +75,13 @@ const DeferredScreen = ({ children }) => (
 )
 
 const TABS = ['home', 'discover', 'agenda', 'groupes', 'account']
+const PULL_REFRESH_THRESHOLD = 82
+const PULL_REFRESH_MAX = 122
 
 // ─────────── MAIN APP ───────────
 const App = () => {
   const { session, loading: authLoading } = useAuth()
-  const { bars, annonces, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount, socialUnread } = useData()
+  const { bars, annonces, participantsMap, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, user, unreadNotificationCount, socialUnread, refreshData } = useData()
   const isLoggedIn = !!session?.user
   const [tab, setTab] = React.useState('home')
   const [socialTab, setSocialTab] = React.useState('groupes')
@@ -93,6 +95,59 @@ const App = () => {
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
   const [sortieSheet, setSortieSheet] = React.useState(null)
   const [notificationsOpen, setNotificationsOpen] = React.useState(false)
+  const [pullDistance, setPullDistance] = React.useState(0)
+  const [pullRefreshing, setPullRefreshing] = React.useState(false)
+  const pullStartY = React.useRef(null)
+  const scrollRef = React.useRef(null)
+
+  const pullProgress = Math.min(1, pullDistance / PULL_REFRESH_THRESHOLD)
+  const pullArmed = pullDistance >= PULL_REFRESH_THRESHOLD
+
+  const finishPullRefresh = React.useCallback(async () => {
+    setPullRefreshing(true)
+    setPullDistance(PULL_REFRESH_THRESHOLD)
+    try {
+      await refreshData()
+      setGroupsRefreshKey(k => k + 1)
+    } catch (err) {
+      console.warn('Refresh indisponible:', err.message)
+    } finally {
+      window.setTimeout(() => {
+        setPullRefreshing(false)
+        setPullDistance(0)
+      }, 360)
+    }
+  }, [refreshData])
+
+  const handleTouchStart = (event) => {
+    if (pullRefreshing || scrollRef.current?.scrollTop > 0) return
+    pullStartY.current = event.touches[0]?.clientY ?? null
+  }
+
+  const handleTouchMove = (event) => {
+    if (pullRefreshing || pullStartY.current == null || scrollRef.current?.scrollTop > 0) return
+    const currentY = event.touches[0]?.clientY ?? pullStartY.current
+    const delta = currentY - pullStartY.current
+
+    if (delta <= 0) {
+      setPullDistance(0)
+      return
+    }
+
+    if (event.cancelable) event.preventDefault()
+    const resisted = Math.min(PULL_REFRESH_MAX, Math.pow(delta, 0.82) * 1.35)
+    setPullDistance(resisted)
+  }
+
+  const handleTouchEnd = () => {
+    pullStartY.current = null
+    if (pullRefreshing) return
+    if (pullDistance >= PULL_REFRESH_THRESHOLD) {
+      finishPullRefresh()
+      return
+    }
+    setPullDistance(0)
+  }
 
   React.useEffect(() => {
     if (!sortieSheet) return
@@ -172,9 +227,20 @@ const App = () => {
     <>
       {/* Screen */}
       <div
+        ref={scrollRef}
         key={tab}
         className={`noscroll${slideDir ? ` tab-slide-${slideDir}` : ''}`}
-        style={{ height: '100%', overflow: 'auto', paddingTop: 46 }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        style={{
+          height: '100%',
+          overflow: 'auto',
+          paddingTop: 46,
+          transform: `translateY(${pullDistance * 0.42}px)`,
+          transition: pullDistance === 0 || pullRefreshing ? 'transform 0.22s cubic-bezier(0.4,0,0.2,1)' : 'none',
+        }}
       >
         {barId ? (
           <DeferredScreen>
@@ -220,6 +286,49 @@ const App = () => {
           </DeferredScreen>
         )}
       </div>
+
+      {(pullDistance > 0 || pullRefreshing) && (
+        <div
+          aria-live="polite"
+          style={{
+            position: 'absolute',
+            top: 12 + Math.min(34, pullDistance * 0.22),
+            left: '50%',
+            zIndex: 80,
+            width: 42,
+            height: 42,
+            borderRadius: '50%',
+            transform: `translateX(-50%) scale(${0.74 + pullProgress * 0.26})`,
+            opacity: Math.min(1, 0.22 + pullProgress),
+            background: 'rgba(250,244,232,0.96)',
+            border: `1px solid ${pullArmed || pullRefreshing ? 'rgba(198,93,61,0.42)' : 'var(--line)'}`,
+            boxShadow: '0 8px 22px rgba(42,31,23,0.14)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            transition: pullRefreshing ? 'top 0.18s, transform 0.18s, opacity 0.18s' : 'none',
+          }}
+        >
+          <span
+            className={pullRefreshing ? 'pull-refresh-spin' : ''}
+            style={{
+              display: 'inline-flex',
+              transform: pullRefreshing ? undefined : `rotate(${pullProgress * 180}deg)`,
+              transition: pullArmed ? 'transform 0.14s ease' : 'none',
+            }}
+          >
+            <Icon
+              name={pullArmed || pullRefreshing ? 'refresh' : 'chevronD'}
+              size={22}
+              color={pullArmed || pullRefreshing ? 'var(--terracotta)' : 'var(--ink-mute)'}
+              stroke={2}
+            />
+          </span>
+        </div>
+      )}
 
       {/* Event sheet */}
       {eventSheet && (

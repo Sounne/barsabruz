@@ -262,6 +262,31 @@ export function DataProvider({ children }) {
     return result
   }, [applyAnnoncesSnapshot, loadEventParticipants, refreshJoinedAnnonces, refreshJoinedEvents])
 
+  const refreshData = React.useCallback(async () => {
+    await cleanupExpiredAgendaItems().catch(() => {})
+    const [barsData, annoncesData] = await Promise.all([
+      fetchBars(),
+      fetchAnnonces(),
+    ])
+    const resolvedBars = barsData?.length ? barsData : BARS_DATA
+    const resolvedAnnonces = annoncesData ?? []
+    setBars(resolvedBars)
+    applyAnnoncesSnapshot(resolvedAnnonces)
+    loadEventParticipants(resolvedBars)
+    refreshJoinedAnnonces()
+    refreshJoinedEvents()
+    refreshInvitations()
+    refreshWebPushStatus()
+    return { bars: resolvedBars, annonces: resolvedAnnonces }
+  }, [
+    applyAnnoncesSnapshot,
+    loadEventParticipants,
+    refreshInvitations,
+    refreshJoinedAnnonces,
+    refreshJoinedEvents,
+    refreshWebPushStatus,
+  ])
+
   React.useEffect(() => {
     skipNotificationWriteRef.current = true
     skipNotificationSettingsWriteRef.current = true
@@ -937,6 +962,7 @@ export function DataProvider({ children }) {
     acceptInvitation,
     declineInvitation,
     inviteFriendsToAnnonce,
+    refreshData,
     refreshInvitations,
     loading,
   }

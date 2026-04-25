@@ -21,6 +21,7 @@ const Icon = ({ name, size = 20, color = 'currentColor', stroke = 1.8 }) => {
     chevronD: <><path d="M6 9l6 6 6-6"/></>,
     back: <><path d="M19 12H5M12 5l-7 7 7 7"/></>,
     close: <><path d="M6 6l12 12M18 6L6 18"/></>,
+    refresh: <><path d="M20 11a8 8 0 10-2.35 5.65"/><path d="M20 5v6h-6"/></>,
     more: <><circle cx="12" cy="5" r="1.3" fill={color} stroke="none"/><circle cx="12" cy="12" r="1.3" fill={color} stroke="none"/><circle cx="12" cy="19" r="1.3" fill={color} stroke="none"/></>,
     bell: <><path d="M6 15.5V10a6 6 0 1112 0v5.5l1.5 2h-15l1.5-2zM10 20a2 2 0 004 0"/></>,
     wine: <><path d="M8 3h8l-1 5a3 3 0 01-3 3h0a3 3 0 01-3-3L8 3zM12 11v8M9 21h6"/></>,
