@@ -3,6 +3,9 @@ import './index.css'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { DataProvider } from './context/DataContext'
+import { registerServiceWorker } from './lib/webPush'
+
+registerServiceWorker()
 
 ReactDOM.createRoot(document.getElementById('app-root')).render(
   <AuthProvider>

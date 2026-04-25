@@ -2,9 +2,10 @@ import React from 'react'
 import { Icon, Avatar } from '../components/ui'
 import { useData } from '../context/DataContext'
 
-const Toggle = ({ checked, onChange }) => (
+const Toggle = ({ checked, onChange, disabled = false }) => (
   <button
     onClick={() => onChange(!checked)}
+    disabled={disabled}
     style={{
       width: 46,
       height: 28,
@@ -12,7 +13,8 @@ const Toggle = ({ checked, onChange }) => (
       border: 'none',
       padding: 3,
       background: checked ? 'var(--terracotta)' : 'var(--line-strong)',
-      cursor: 'pointer',
+      opacity: disabled ? 0.45 : 1,
+      cursor: disabled ? 'default' : 'pointer',
       transition: 'background 0.18s',
     }}
     aria-pressed={checked}
@@ -190,17 +192,33 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
     notificationSettings,
     updateNotificationSetting,
     notificationPermission,
+    webPushStatus,
     requestBrowserNotifications,
+    disableBrowserNotifications,
   } = useData()
   const [showSettings, setShowSettings] = React.useState(false)
+  const [pushBusy, setPushBusy] = React.useState(false)
 
-  const enableBrowser = async () => {
-    if (notificationPermission === 'granted') {
-      updateNotificationSetting('browser', !notificationSettings.browser)
-      return
+  const handleBrowserToggle = async (enabled) => {
+    setPushBusy(true)
+    try {
+      if (enabled) {
+        await requestBrowserNotifications()
+      } else {
+        await disableBrowserNotifications()
+      }
+    } finally {
+      setPushBusy(false)
     }
-    await requestBrowserNotifications()
   }
+
+  const browserDetail = (() => {
+    if (!webPushStatus.supported) return 'Non supporte sur ce navigateur ou hors HTTPS'
+    if (!webPushStatus.configured) return 'Cle VAPID publique a configurer'
+    if (notificationPermission === 'denied') return 'Autorisation bloquee dans le navigateur'
+    if (webPushStatus.subscribed) return 'Alertes actives meme quand l app est fermee'
+    return 'Pour les invitations et participations importantes'
+  })()
 
   return (
     <div
@@ -310,14 +328,13 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700 }}>Alertes du navigateur</div>
                   <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 2 }}>
-                    {notificationPermission === 'denied'
-                      ? 'Autorisation bloquee dans le navigateur'
-                      : 'Pour les invitations et participations importantes'}
+                    {webPushStatus.error || browserDetail}
                   </div>
                 </div>
                 <Toggle
-                  checked={notificationSettings.browser && notificationPermission === 'granted'}
-                  onChange={enableBrowser}
+                  checked={notificationSettings.browser && webPushStatus.subscribed && notificationPermission === 'granted'}
+                  onChange={handleBrowserToggle}
+                  disabled={pushBusy || !webPushStatus.supported || !webPushStatus.configured || notificationPermission === 'denied'}
                 />
               </div>
             </div>

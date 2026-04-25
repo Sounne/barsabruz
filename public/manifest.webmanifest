@@ -1,0 +1,32 @@
+{
+  "name": "Bars a Bruz",
+  "short_name": "Bars Bruz",
+  "description": "Sorties, bars et evenements autour de Bruz.",
+  "id": "/barsabruz/",
+  "start_url": "/barsabruz/",
+  "scope": "/barsabruz/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF4E8",
+  "theme_color": "#C65D3D",
+  "icons": [
+    {
+      "src": "/barsabruz/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/barsabruz/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/barsabruz/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

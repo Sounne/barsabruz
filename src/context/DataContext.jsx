@@ -16,6 +16,7 @@ import {
   cleanupExpiredAgendaItems,
 } from '../services'
 import { getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe } from '../lib/chatApi'
+import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush } from '../lib/webPush'
 import { BARS_DATA, ANNONCES_PUBLIC, USER_DATA } from '../data'
 import { useAuth } from './AuthContext'
 import { getBarEvents, getEventTags } from '../utils/events'
@@ -66,6 +67,13 @@ export function DataProvider({ children }) {
   const [notificationPermission, setNotificationPermission] = React.useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   )
+  const [webPushStatus, setWebPushStatus] = React.useState({
+    supported: false,
+    configured: false,
+    subscribed: false,
+    permission: 'unsupported',
+    error: '',
+  })
   const [loading, setLoading] = React.useState(true)
   const skipNotificationWriteRef = React.useRef(true)
   const skipNotificationSettingsWriteRef = React.useRef(true)
@@ -79,6 +87,22 @@ export function DataProvider({ children }) {
     () => `barsabruz:notification-settings:${user?.id ?? 'guest'}`,
     [user?.id]
   )
+
+  const refreshWebPushStatus = React.useCallback(async () => {
+    try {
+      const status = await getWebPushStatus()
+      setWebPushStatus(prev => ({ ...prev, ...status, error: '' }))
+      setNotificationPermission(status.permission)
+      setNotificationSettings(prev => ({
+        ...prev,
+        browser: status.subscribed && status.permission === 'granted',
+      }))
+      return status
+    } catch (err) {
+      setWebPushStatus(prev => ({ ...prev, error: err.message || 'Statut push indisponible' }))
+      return null
+    }
+  }, [])
 
   const readStorage = React.useCallback((key, fallback) => {
     try {
@@ -202,6 +226,14 @@ export function DataProvider({ children }) {
     }
     writeStorage(notificationSettingsKey, notificationSettings)
   }, [notificationSettingsKey, notificationSettings, writeStorage])
+
+  React.useEffect(() => {
+    if (!user) {
+      setWebPushStatus(prev => ({ ...prev, subscribed: false }))
+      return
+    }
+    refreshWebPushStatus()
+  }, [user?.id, refreshWebPushStatus])
 
   // Load bars + annonces once
   React.useEffect(() => {
@@ -701,19 +733,6 @@ export function DataProvider({ children }) {
     [agendaEvents]
   )
 
-  React.useEffect(() => {
-    if (!user) return
-    if (!notificationSettings.browser || notificationPermission !== 'granted') return
-    const latest = notifications.find(n => !n.read && ['invitation', 'participant'].includes(n.type))
-    if (!latest) return
-    const key = `barsabruz:last-browser-notification:${user?.id ?? 'guest'}`
-    if (readStorage(key, null) === latest.id) return
-    try {
-      new Notification(latest.title, { body: latest.body })
-      writeStorage(key, latest.id)
-    } catch {}
-  }, [notificationPermission, notificationSettings.browser, notifications, readStorage, user?.id, writeStorage])
-
   const markNotificationRead = React.useCallback((id) => {
     setNotificationReadIds(prev => new Set([...prev, id]))
   }, [])
@@ -732,16 +751,45 @@ export function DataProvider({ children }) {
   }, [])
 
   const requestBrowserNotifications = React.useCallback(async () => {
-    if (!user) return 'unsupported'
-    if (typeof Notification === 'undefined') {
-      setNotificationPermission('unsupported')
-      return 'unsupported'
+    if (!user) return { permission: 'unsupported', subscribed: false }
+    setWebPushStatus(prev => ({ ...prev, error: '' }))
+
+    try {
+      const result = await subscribeUserToPush(user.id)
+      const status = await refreshWebPushStatus()
+      setNotificationSettings(prev => ({ ...prev, browser: true }))
+      return {
+        ...status,
+        subscriptionId: result.id,
+        permission: 'granted',
+        subscribed: true,
+      }
+    } catch (err) {
+      const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+      setNotificationPermission(permission)
+      setNotificationSettings(prev => ({ ...prev, browser: false }))
+      setWebPushStatus(prev => ({
+        ...prev,
+        permission,
+        subscribed: false,
+        error: err.message || 'Impossible d activer les notifications push.',
+      }))
+      return { permission, subscribed: false, error: err.message }
     }
-    const permission = await Notification.requestPermission()
-    setNotificationPermission(permission)
-    setNotificationSettings(prev => ({ ...prev, browser: permission === 'granted' }))
-    return permission
-  }, [user])
+  }, [refreshWebPushStatus, user?.id])
+
+  const disableBrowserNotifications = React.useCallback(async () => {
+    if (!user) return
+    setWebPushStatus(prev => ({ ...prev, error: '' }))
+    try {
+      await unsubscribeUserFromPush(user.id)
+    } catch (err) {
+      setWebPushStatus(prev => ({ ...prev, error: err.message || 'Desactivation push incomplete.' }))
+    } finally {
+      setNotificationSettings(prev => ({ ...prev, browser: false }))
+      refreshWebPushStatus()
+    }
+  }, [refreshWebPushStatus, user?.id])
 
   const value = {
     bars: bars ?? BARS_DATA,
@@ -768,11 +816,13 @@ export function DataProvider({ children }) {
     unreadNotificationCount,
     notificationSettings,
     notificationPermission,
+    webPushStatus,
     markNotificationRead,
     markAllNotificationsRead,
     dismissNotification,
     updateNotificationSetting,
     requestBrowserNotifications,
+    disableBrowserNotifications,
     acceptInvitation,
     declineInvitation,
     inviteFriendsToAnnonce,

@@ -241,7 +241,7 @@ const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
 
 // ─────────── ACCOUNT SCREEN ───────────
 const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) => {
-  const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, unreadNotificationCount, notificationSettings } = useData()
+  const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, unreadNotificationCount, webPushStatus } = useData()
   const { user: authUser } = useAuth()
   const [editing, setEditing] = React.useState(false)
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
@@ -416,7 +416,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) =>
             {
               icon: 'bell',
               label: 'Notifications',
-              detail: unreadNotificationCount > 0 ? `${unreadNotificationCount} non lue${unreadNotificationCount > 1 ? 's' : ''}` : (notificationSettings.browser ? 'Alertes actives' : ''),
+              detail: unreadNotificationCount > 0 ? `${unreadNotificationCount} non lue${unreadNotificationCount > 1 ? 's' : ''}` : (webPushStatus.subscribed ? 'Alertes actives' : ''),
               onClick: onOpenNotifications,
               active: true,
             },
