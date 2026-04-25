@@ -103,9 +103,96 @@ html, body {
   }
 }
 
+.photo-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  isolation: isolate;
+}
+
+.photo-zoom__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 14, 10, 0.68);
+  backdrop-filter: blur(16px);
+  animation: photoZoomBackdropIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.photo-zoom__image {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: var(--photo-zoom-size);
+  height: var(--photo-zoom-size);
+  max-width: 82vw;
+  max-height: 72vh;
+  object-fit: cover;
+  border-radius: 28px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+  transform-origin: center;
+  animation: photoZoomIn 0.46s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, border-radius;
+}
+
+.photo-zoom--closing {
+  pointer-events: none;
+}
+
+.photo-zoom--closing .photo-zoom__backdrop {
+  animation: photoZoomBackdropOut 0.34s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
+.photo-zoom--closing .photo-zoom__image {
+  animation: photoZoomOut 0.36s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
+@keyframes photoZoomIn {
+  from {
+    border-radius: 50%;
+    transform: translate(calc(-50% + var(--photo-origin-x)), calc(-50% + var(--photo-origin-y))) scale(var(--photo-origin-scale));
+  }
+  to {
+    border-radius: 28px;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes photoZoomOut {
+  from {
+    border-radius: 28px;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    border-radius: 50%;
+    transform: translate(calc(-50% + var(--photo-origin-x)), calc(-50% + var(--photo-origin-y))) scale(var(--photo-origin-scale));
+  }
+}
+
+@keyframes photoZoomBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes photoZoomBackdropOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bar-hero__photo {
     animation: none;
+  }
+
+  .photo-zoom__backdrop,
+  .photo-zoom__image,
+  .photo-zoom--closing .photo-zoom__backdrop,
+  .photo-zoom--closing .photo-zoom__image {
+    animation-duration: 0.01ms;
   }
 }
 

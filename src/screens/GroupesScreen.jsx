@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar } from '../components/ui'
+import { Icon, Avatar, ZoomableAvatar } from '../components/ui'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import * as chatApi from '../lib/chatApi'
@@ -236,12 +236,13 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, paddingBottom: 18 }}>
-          <Avatar
+          <ZoomableAvatar
             letter={display.avatar_letter}
             src={display.avatar_url}
             color={display.color}
             size={88}
             ring
+            label={display.name}
           />
           <div className="serif" style={{ fontSize: 22, fontWeight: 600, textAlign: 'center' }}>
             {display.name}

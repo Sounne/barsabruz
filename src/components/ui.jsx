@@ -67,6 +67,85 @@ const Avatar = ({ letter, src, color = '#C65D3D', size = 36, ring = false, style
   </div>
 );
 
+const ZoomableAvatar = ({ letter, src, color = '#C65D3D', size = 36, ring = false, style, label }) => {
+  const buttonRef = React.useRef(null)
+  const [viewer, setViewer] = React.useState(null)
+
+  const closeViewer = React.useCallback(() => {
+    setViewer(prev => prev ? { ...prev, closing: true } : prev)
+  }, [])
+
+  React.useEffect(() => {
+    if (!viewer || viewer.closing) return undefined
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') closeViewer()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [viewer, closeViewer])
+
+  const openViewer = () => {
+    if (!src || !buttonRef.current) return
+    const rect = buttonRef.current.getBoundingClientRect()
+    const finalSize = Math.min(window.innerWidth * 0.82, window.innerHeight * 0.72, 420)
+    setViewer({
+      originX: rect.left + rect.width / 2 - window.innerWidth / 2,
+      originY: rect.top + rect.height / 2 - window.innerHeight / 2,
+      originScale: rect.width / finalSize,
+      finalSize,
+      closing: false,
+    })
+  }
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={openViewer}
+        aria-label={src ? `Agrandir la photo de ${label || 'profil'}` : undefined}
+        disabled={!src}
+        style={{
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          borderRadius: '50%',
+          cursor: src ? 'zoom-in' : 'default',
+          display: 'inline-flex',
+          flexShrink: 0,
+          fontFamily: 'inherit',
+        }}
+      >
+        <Avatar letter={letter} src={src} color={color} size={size} ring={ring} style={style}/>
+      </button>
+
+      {viewer && (
+        <div
+          className={`photo-zoom${viewer.closing ? ' photo-zoom--closing' : ''}`}
+          onClick={closeViewer}
+          onAnimationEnd={() => {
+            if (viewer.closing) setViewer(null)
+          }}
+          style={{
+            '--photo-origin-x': `${viewer.originX}px`,
+            '--photo-origin-y': `${viewer.originY}px`,
+            '--photo-origin-scale': viewer.originScale,
+            '--photo-zoom-size': `${viewer.finalSize}px`,
+          }}
+        >
+          <div className="photo-zoom__backdrop" />
+          <img
+            className="photo-zoom__image"
+            src={src}
+            alt={label ? `Photo de ${label}` : 'Photo de profil'}
+            onClick={event => event.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
+  )
+}
+
 function shade(hex, pct) {
   const n = parseInt(hex.slice(1), 16);
   let r = (n >> 16) + pct * 2.55;
@@ -208,4 +287,4 @@ const Wip = ({ children }) => (
   </div>
 );
 
-export { Icon, Avatar, BarHero, Tag, OpenDot, shade, Wip };
+export { Icon, Avatar, ZoomableAvatar, BarHero, Tag, OpenDot, shade, Wip };

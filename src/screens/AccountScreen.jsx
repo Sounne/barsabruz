@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, Avatar, shade } from '../components/ui'
+import { Icon, Avatar, ZoomableAvatar, shade } from '../components/ui'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { signOut, uploadAvatar } from '../services'
@@ -299,7 +299,14 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) =>
         boxShadow: '0 -4px 20px rgba(42,31,23,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
-          <Avatar letter={user.avatar} src={user.avatarUrl} color={user.color} size={76} ring/>
+          <ZoomableAvatar
+            letter={user.avatar}
+            src={user.avatarUrl}
+            color={user.color}
+            size={76}
+            ring
+            label={user.name}
+          />
           <div style={{ flex: 1, paddingBottom: 4 }}>
             <div className="serif" style={{ fontSize: 22, fontWeight: 600 }}>{user.name}</div>
             <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>{user.handle}</div>
