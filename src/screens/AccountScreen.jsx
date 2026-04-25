@@ -240,8 +240,8 @@ const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
 )
 
 // ─────────── ACCOUNT SCREEN ───────────
-const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) => {
-  const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, unreadNotificationCount, webPushStatus } = useData()
+const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriends }) => {
+  const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, notificationSettings } = useData()
   const { user: authUser } = useAuth()
   const [editing, setEditing] = React.useState(false)
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
@@ -260,6 +260,9 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) =>
 
   const displayedAnnonces = annoncesExpanded ? mesAnnonces : mesAnnonces.slice(0, 2)
   const displayedSorties = sortiesExpanded ? mesSorties : mesSorties.slice(0, 2)
+  const activeNotificationCount = ['messages', 'groups', 'events']
+    .filter(key => notificationSettings[key])
+    .length
 
   const handleSave = async (updates) => {
     await saveProfile(updates)
@@ -416,8 +419,8 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) =>
             {
               icon: 'bell',
               label: 'Notifications',
-              detail: unreadNotificationCount > 0 ? `${unreadNotificationCount} non lue${unreadNotificationCount > 1 ? 's' : ''}` : (webPushStatus.subscribed ? 'Alertes actives' : ''),
-              onClick: onOpenNotifications,
+              detail: `${activeNotificationCount}/3 actives`,
+              onClick: onOpenNotificationSettings,
               active: true,
             },
             { icon: 'users', label: 'Mes amis', detail: String(friends.length), onClick: onOpenFriends, active: true },
@@ -440,8 +443,8 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotifications, onOpenFriends }) =>
               <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{row.label}</div>
               <div style={{
                 fontSize: 12,
-                color: row.active && unreadNotificationCount > 0 ? 'var(--terracotta)' : 'var(--ink-mute)',
-                fontWeight: row.active && unreadNotificationCount > 0 ? 700 : 400,
+                color: 'var(--ink-mute)',
+                fontWeight: 400,
               }}>{row.detail}</div>
               <Icon name="chevron" size={14} color="var(--ink-mute)"/>
             </div>

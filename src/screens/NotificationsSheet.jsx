@@ -185,6 +185,116 @@ const settingRows = [
   { key: 'events', label: 'Evenements', detail: 'Les prochains rendez-vous des bars' },
 ]
 
+const profileSettingRows = [
+  { key: 'messages', icon: 'bell', label: 'Messages', detail: 'Messages prives entre amis' },
+  { key: 'groups', icon: 'users', label: 'Groupes', detail: 'Messages des discussions de groupe' },
+  { key: 'events', icon: 'calendar', label: 'Evenements', detail: 'Rappels et nouveautes des bars' },
+]
+
+const NotificationSettingsSheet = ({ onClose }) => {
+  const { notificationSettings, updateNotificationSetting } = useData()
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 220,
+        background: 'rgba(42,31,23,0.44)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        animation: 'fadeIn 0.15s',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxHeight: '88%',
+          overflow: 'auto',
+          background: 'var(--paper)',
+          borderTopLeftRadius: 26,
+          borderTopRightRadius: 26,
+          boxShadow: '0 -12px 36px rgba(42,31,23,0.18)',
+          animation: 'slideUp 0.24s',
+        }}
+      >
+        <div style={{ padding: '14px 20px 30px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <div style={{ width: 38, height: 4, borderRadius: 99, background: 'var(--line-strong)' }}/>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div className="serif" style={{ fontSize: 24, fontWeight: 600, lineHeight: 1 }}>
+                Notifications
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 5 }}>
+                Choisis les alertes que tu veux recevoir.
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              border: 'none',
+              background: 'rgba(42,31,23,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}>
+              <Icon name="close" size={16} color="var(--ink-mute)"/>
+            </button>
+          </div>
+
+          <div style={{
+            marginTop: 18,
+            background: '#fff',
+            borderRadius: 16,
+            overflow: 'hidden',
+            border: '1px solid var(--line)',
+            boxShadow: 'var(--shadow-card)',
+          }}>
+            {profileSettingRows.map((row, i) => (
+              <div key={row.key} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '14px',
+                borderBottom: i < profileSettingRows.length - 1 ? '1px solid var(--line)' : 'none',
+              }}>
+                <div style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 9,
+                  background: notificationSettings[row.key] ? 'rgba(198,93,61,0.11)' : 'rgba(42,31,23,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Icon name={row.icon} size={16} color={notificationSettings[row.key] ? 'var(--terracotta)' : 'var(--ink-mute)'}/>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{row.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 2 }}>{row.detail}</div>
+                </div>
+                <Toggle
+                  checked={!!notificationSettings[row.key]}
+                  onChange={value => updateNotificationSetting(row.key, value)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
   const {
     notifications,
@@ -417,4 +527,4 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
   )
 }
 
-export { NotificationsSheet }
+export { NotificationsSheet, NotificationSettingsSheet }

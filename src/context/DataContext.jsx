@@ -19,7 +19,7 @@ import {
   getAccessibleGroups, getFriends, subscribeToFriendships, unsubscribe,
   getSocialUnreadSummary, markAllSocialMessagesRead, subscribeToSocialUnreadChanges,
 } from '../lib/chatApi'
-import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush, getPushPreferences, updatePushPreference } from '../lib/webPush'
+import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush, getNotificationPreferences, updateNotificationPreference } from '../lib/webPush'
 import { BARS_DATA } from '../data'
 import { useAuth } from './AuthContext'
 import { getBarEvents, getEventTags } from '../utils/events'
@@ -96,8 +96,9 @@ export function DataProvider({ children }) {
     invitations: true,
     participants: true,
     sorties: true,
-    events: true,
+    events: false,
     messages: true,
+    groups: true,
     browser: false,
   })
   const [notificationPermission, setNotificationPermission] = React.useState(
@@ -876,19 +877,19 @@ export function DataProvider({ children }) {
     setNotificationDismissedIds(prev => new Set([...prev, id]))
   }, [])
 
-  const SERVER_PREF_KEYS = React.useMemo(() => new Set(['messages', 'invitations', 'participants', 'sorties', 'events']), [])
+  const SERVER_PREF_KEYS = React.useMemo(() => new Set(['messages', 'groups', 'events']), [])
 
   const updateNotificationSetting = React.useCallback((key, value) => {
     setNotificationSettings(prev => ({ ...prev, [key]: value }))
     if (user && SERVER_PREF_KEYS.has(key)) {
-      updatePushPreference(user.id, key, value).catch(() => {})
+      updateNotificationPreference(user.id, key, value).catch(() => {})
     }
   }, [user?.id, SERVER_PREF_KEYS])
 
   React.useEffect(() => {
     if (!user) return
     let cancelled = false
-    getPushPreferences(user.id)
+    getNotificationPreferences(user.id)
       .then(prefs => {
         if (cancelled || !prefs) return
         setNotificationSettings(prev => ({ ...prev, ...prefs }))

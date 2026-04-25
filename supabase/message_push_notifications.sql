@@ -97,7 +97,7 @@ begin
     ),
     body := jsonb_build_object(
       'userIds', v_recipients,
-      'prefKey', 'messages',
+      'prefKey', 'groups',
       'notification', jsonb_build_object(
         'title', coalesce(v_group_emoji || ' ', '') || coalesce(v_group_name, 'Groupe'),
         'body', v_sender_name || ': ' || left(new.text, 120),

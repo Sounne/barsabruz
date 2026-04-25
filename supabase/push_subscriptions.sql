@@ -14,20 +14,16 @@ create table if not exists public.push_subscriptions (
   disabled_at timestamptz,
   prefs jsonb not null default '{
     "messages": true,
-    "invitations": true,
-    "participants": true,
-    "sorties": true,
-    "events": true
+    "groups": true,
+    "events": false
   }'::jsonb
 );
 
 alter table public.push_subscriptions
   add column if not exists prefs jsonb not null default '{
     "messages": true,
-    "invitations": true,
-    "participants": true,
-    "sorties": true,
-    "events": true
+    "groups": true,
+    "events": false
   }'::jsonb;
 
 create index if not exists push_subscriptions_user_id_idx

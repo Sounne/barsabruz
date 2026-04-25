@@ -1,6 +1,11 @@
 import { supabase } from './supabase'
 
 const PUBLIC_VAPID_KEY = import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY
+const DEFAULT_NOTIFICATION_PREFERENCES = {
+  messages: true,
+  groups: true,
+  events: false,
+}
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -76,6 +81,7 @@ export async function subscribeUserToPush(userId) {
     applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
   })
   const json = subscription.toJSON()
+  const prefs = await getNotificationPreferences(userId)
 
   const { data, error } = await supabase
     .from('push_subscriptions')
@@ -85,6 +91,7 @@ export async function subscribeUserToPush(userId) {
       keys: json.keys,
       user_agent: navigator.userAgent,
       enabled: true,
+      prefs,
       last_seen_at: new Date().toISOString(),
     }, { onConflict: 'endpoint' })
     .select('id')
@@ -95,20 +102,63 @@ export async function subscribeUserToPush(userId) {
 }
 
 export async function getPushPreferences(userId) {
-  if (!userId) return null
-  const { data, error } = await supabase
-    .from('push_subscriptions')
-    .select('prefs')
-    .eq('user_id', userId)
-    .eq('enabled', true)
-    .limit(1)
-    .maybeSingle()
-  if (error) return null
-  return data?.prefs ?? null
+  return getNotificationPreferences(userId)
 }
 
 export async function updatePushPreference(userId, key, value) {
+  return updateNotificationPreference(userId, key, value)
+}
+
+export async function getNotificationPreferences(userId) {
+  if (!userId) return DEFAULT_NOTIFICATION_PREFERENCES
+
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .select('messages, groups, events')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    const { data: pushData } = await supabase
+      .from('push_subscriptions')
+      .select('prefs')
+      .eq('user_id', userId)
+      .eq('enabled', true)
+      .limit(1)
+      .maybeSingle()
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...(pushData?.prefs ?? {}) }
+  }
+
+  if (data) return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...data }
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('notification_preferences')
+    .insert({ user_id: userId, ...DEFAULT_NOTIFICATION_PREFERENCES })
+    .select('messages, groups, events')
+    .single()
+
+  if (insertError) return DEFAULT_NOTIFICATION_PREFERENCES
+  return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...inserted }
+}
+
+export async function updateNotificationPreference(userId, key, value) {
   if (!userId || !key) return
+
+  const { error: createError } = await supabase
+    .from('notification_preferences')
+    .upsert(
+      { user_id: userId, ...DEFAULT_NOTIFICATION_PREFERENCES },
+      { onConflict: 'user_id', ignoreDuplicates: true }
+    )
+  if (createError) throw createError
+
+  const { error: prefsError } = await supabase
+    .from('notification_preferences')
+    .update({ [key]: value, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+
+  if (prefsError) throw prefsError
+
   const { data: subs, error: fetchError } = await supabase
     .from('push_subscriptions')
     .select('id, prefs')

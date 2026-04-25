@@ -48,6 +48,10 @@ const NotificationsSheet = React.lazy(() =>
   import('./screens/NotificationsSheet').then((module) => ({ default: module.NotificationsSheet })),
 )
 
+const NotificationSettingsSheet = React.lazy(() =>
+  import('./screens/NotificationsSheet').then((module) => ({ default: module.NotificationSettingsSheet })),
+)
+
 // ─────────── LOADING SPLASH ───────────
 const LoadingSplash = () => (
   <div style={{
@@ -95,6 +99,7 @@ const App = () => {
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
   const [sortieSheet, setSortieSheet] = React.useState(null)
   const [notificationsOpen, setNotificationsOpen] = React.useState(false)
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = React.useState(false)
   const [pullDistance, setPullDistance] = React.useState(0)
   const [pullRefreshing, setPullRefreshing] = React.useState(false)
   const pullStartY = React.useRef(null)
@@ -182,6 +187,10 @@ const App = () => {
     openNotifications: () => {
       if (!isLoggedIn) return
       setNotificationsOpen(true)
+    },
+    openNotificationSettings: () => {
+      if (!isLoggedIn) return
+      setNotificationSettingsOpen(true)
     },
   }
 
@@ -276,7 +285,7 @@ const App = () => {
           <DeferredScreen>
             <AccountScreen
               onOpenAnnonce={navigate.openAnnonce}
-              onOpenNotifications={navigate.openNotifications}
+              onOpenNotificationSettings={navigate.openNotificationSettings}
               onOpenFriends={navigate.openFriends}
             />
           </DeferredScreen>
@@ -350,6 +359,12 @@ const App = () => {
               navigate.openEvent(event)
             }}
           />
+        </DeferredScreen>
+      )}
+
+      {isLoggedIn && notificationSettingsOpen && (
+        <DeferredScreen>
+          <NotificationSettingsSheet onClose={() => setNotificationSettingsOpen(false)} />
         </DeferredScreen>
       )}
 
