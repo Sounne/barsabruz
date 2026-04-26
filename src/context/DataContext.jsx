@@ -20,6 +20,7 @@ import {
   getSocialUnreadSummary, markAllSocialMessagesRead, subscribeToSocialUnreadChanges,
 } from '../lib/chatApi'
 import { getWebPushStatus, subscribeUserToPush, unsubscribeUserFromPush, getNotificationPreferences, updateNotificationPreference } from '../lib/webPush'
+import { getPrivacyPreferences, updatePrivacyPreference } from '../lib/privacy'
 import { BARS_DATA } from '../data'
 import { useAuth } from './AuthContext'
 import { getBarEvents, getEventTags } from '../utils/events'
@@ -347,7 +348,10 @@ export function DataProvider({ children }) {
 
   const updatePrivacySetting = React.useCallback((key, value) => {
     setPrivacySettings(prev => ({ ...prev, [key]: value }))
-  }, [])
+    if (user) {
+      updatePrivacyPreference(user.id, key, value).catch(() => {})
+    }
+  }, [user?.id])
 
   React.useEffect(() => {
     if (!user) {
@@ -922,6 +926,18 @@ export function DataProvider({ children }) {
       .then(prefs => {
         if (cancelled || !prefs) return
         setNotificationSettings(prev => ({ ...prev, ...prefs }))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [user?.id])
+
+  React.useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    getPrivacyPreferences(user.id)
+      .then(prefs => {
+        if (cancelled || !prefs) return
+        setPrivacySettings(prev => ({ ...prev, ...prefs }))
       })
       .catch(() => {})
     return () => { cancelled = true }

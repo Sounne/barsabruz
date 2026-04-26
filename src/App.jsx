@@ -110,6 +110,7 @@ const App = () => {
   const [notificationsOpen, setNotificationsOpen] = React.useState(false)
   const [notificationSettingsOpen, setNotificationSettingsOpen] = React.useState(false)
   const [privacySettingsOpen, setPrivacySettingsOpen] = React.useState(false)
+  const [privacySettingsClosing, setPrivacySettingsClosing] = React.useState(false)
   const [pullDistance, setPullDistance] = React.useState(0)
   const [pullRefreshing, setPullRefreshing] = React.useState(false)
   const pullStartY = React.useRef(null)
@@ -260,6 +261,7 @@ const App = () => {
     },
     openPrivacySettings: () => {
       if (!isLoggedIn) return
+      setPrivacySettingsClosing(false)
       setPrivacySettingsOpen(true)
     },
   }
@@ -479,9 +481,17 @@ const App = () => {
       )}
 
       {isLoggedIn && privacySettingsOpen && (
-        <DeferredScreen>
-          <PrivacySettingsSheet onClose={() => setPrivacySettingsOpen(false)} />
-        </DeferredScreen>
+        <Sheet
+          className="privacy-sheet"
+          label="Confidentialité"
+          closing={privacySettingsClosing}
+          onClose={() => setPrivacySettingsClosing(true)}
+          onExited={() => { setPrivacySettingsOpen(false); setPrivacySettingsClosing(false) }}
+        >
+          <DeferredScreen>
+            <PrivacySettingsSheet onClose={() => setPrivacySettingsClosing(true)} />
+          </DeferredScreen>
+        </Sheet>
       )}
 
       {/* Sortie detail sheet (annonces from account) */}

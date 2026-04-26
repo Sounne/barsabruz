@@ -257,6 +257,16 @@ html, body {
   max-height: 88%;
 }
 
+.privacy-sheet .sheet__panel {
+  height: auto;
+  max-height: 88%;
+}
+
+.notification-settings-sheet .sheet__panel {
+  height: auto;
+  max-height: 88%;
+}
+
 .sheet--closing {
   pointer-events: none;
 }

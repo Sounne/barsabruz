@@ -328,18 +328,20 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
-          {[
-            { n: mesAnnonces.length + mesSorties.length, l: 'Sorties' },
-            { n: myGroups.length, l: 'Groupes' },
-            { n: friends.length, l: 'Amis' },
-          ].map(s => (
-            <div key={s.l}>
-              <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>{s.n}</div>
-              <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.l}</div>
-            </div>
-          ))}
-        </div>
+        {privacySettings?.showStats && (
+          <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+            {[
+              { n: mesAnnonces.length + mesSorties.length, l: 'Sorties' },
+              { n: myGroups.length, l: 'Groupes' },
+              { n: friends.length, l: 'Amis' },
+            ].map(s => (
+              <div key={s.l}>
+                <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>{s.n}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-mute)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Mes annonces (sorties créées) */}
@@ -378,7 +380,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
       )}
 
       {/* Mes sorties rejointes */}
-      {authUser && (
+      {authUser && privacySettings?.shareJoinedSorties && (
         <div style={{ padding: '14px 20px 10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
             <h2 className="serif" style={{ fontSize: 18, margin: 0, fontWeight: 600 }}>Sorties rejointes</h2>

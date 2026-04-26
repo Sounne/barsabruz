@@ -204,6 +204,7 @@ const NotificationSettingsSheet = ({ onClose }) => {
         background: 'rgba(42,31,23,0.44)',
         display: 'flex',
         alignItems: 'flex-end',
+        justifyContent: 'center',
         animation: 'fadeIn 0.15s',
       }}
     >
@@ -211,6 +212,7 @@ const NotificationSettingsSheet = ({ onClose }) => {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%',
+          maxWidth: 520,
           maxHeight: '88%',
           overflow: 'auto',
           background: 'var(--paper)',
@@ -353,6 +355,7 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
         background: 'rgba(42,31,23,0.44)',
         display: 'flex',
         alignItems: 'flex-end',
+        justifyContent: 'center',
         animation: 'fadeIn 0.15s',
       }}
     >
@@ -360,6 +363,7 @@ const NotificationsSheet = ({ onClose, onOpenAnnonce, onOpenEvent }) => {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%',
+          maxWidth: 520,
           maxHeight: '88%',
           overflow: 'auto',
           background: 'var(--paper)',
