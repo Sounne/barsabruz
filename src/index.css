@@ -247,6 +247,11 @@ html, body {
   overflow: hidden;
 }
 
+.event-sheet .sheet__panel {
+  height: auto;
+  max-height: 85%;
+}
+
 .sheet--closing {
   pointer-events: none;
 }

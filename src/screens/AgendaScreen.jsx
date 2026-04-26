@@ -216,31 +216,8 @@ const EventSheet = ({ event, onClose }) => {
   if (!currentEvent) return null
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 100,
-        background: 'rgba(0,0,0,0.4)',
-        display: 'flex',
-        alignItems: 'flex-end',
-        animation: 'fadeIn 0.2s',
-      }}
-      onClick={onClose}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%',
-          background: 'var(--paper)',
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          maxHeight: '85%',
-          overflow: 'auto',
-          animation: 'slideUp 0.25s',
-        }}
-      >
-        <div style={{ height: 260, position: 'relative' }}>
+    <>
+      <div style={{ height: 260, position: 'relative' }}>
           <BarHero bar={currentEvent.bar} height={260} />
           <button
             onClick={onClose}
@@ -404,8 +381,7 @@ const EventSheet = ({ event, onClose }) => {
             {shareLabel}
           </button>
         </div>
-      </div>
-    </div>
+    </>
   )
 }
 

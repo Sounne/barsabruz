@@ -94,6 +94,7 @@ const App = () => {
   const [barId, setBarId] = React.useState(null)
   const [barSheetClosing, setBarSheetClosing] = React.useState(false)
   const [eventSheet, setEventSheet] = React.useState(null)
+  const [eventSheetClosing, setEventSheetClosing] = React.useState(false)
   const [groupChat, setGroupChat] = React.useState(null)
   const [groupChatClosing, setGroupChatClosing] = React.useState(false)
   const [dmChat, setDmChat] = React.useState(null)
@@ -190,6 +191,20 @@ const App = () => {
     setBarSheetClosing(false)
   }, [])
 
+  const openEventSheet = React.useCallback((event) => {
+    setEventSheetClosing(false)
+    setEventSheet(event)
+  }, [])
+
+  const closeEventSheet = React.useCallback(() => {
+    setEventSheetClosing(true)
+  }, [])
+
+  const clearEventSheet = React.useCallback(() => {
+    setEventSheet(null)
+    setEventSheetClosing(false)
+  }, [])
+
   const openGroupChat = React.useCallback((group) => {
     setGroupChatClosing(false)
     setGroupChat(group)
@@ -222,7 +237,7 @@ const App = () => {
 
   const navigate = {
     openBar: openBarSheet,
-    openEvent: (e) => setEventSheet(e),
+    openEvent: openEventSheet,
     openGroup: openGroupChat,
     openDM: openDMChat,
     openFriends: () => {
@@ -418,9 +433,17 @@ const App = () => {
 
       {/* Event sheet */}
       {eventSheet && (
-        <DeferredScreen>
-          <EventSheet event={eventSheet} onClose={() => setEventSheet(null)}/>
-        </DeferredScreen>
+        <Sheet
+          className="event-sheet"
+          label="Détail de l'événement"
+          closing={eventSheetClosing}
+          onClose={closeEventSheet}
+          onExited={clearEventSheet}
+        >
+          <DeferredScreen>
+            <EventSheet event={eventSheet} onClose={closeEventSheet}/>
+          </DeferredScreen>
+        </Sheet>
       )}
 
       {isLoggedIn && notificationsOpen && (
