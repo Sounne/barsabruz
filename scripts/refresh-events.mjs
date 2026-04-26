@@ -1,6 +1,8 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const INSTAGRAM_APP_ID = '936619743392459'
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
 
 const BARS = [
   {
@@ -271,7 +273,8 @@ async function fetchJson(url, options = {}) {
   const response = await fetch(url, {
     ...options,
     headers: {
-      'user-agent': 'Mozilla/5.0 (compatible; BarsABruzRefresh/1.0)',
+      'user-agent': BROWSER_USER_AGENT,
+      'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8',
       accept: 'application/json,text/html;q=0.9,*/*;q=0.8',
       ...(options.headers ?? {}),
     },
@@ -302,7 +305,10 @@ async function fetchInstagramPosts(username) {
 
 async function checkWebsite(url) {
   const response = await fetch(url, {
-    headers: { 'user-agent': 'Mozilla/5.0 (compatible; BarsABruzRefresh/1.0)' },
+    headers: {
+      'user-agent': BROWSER_USER_AGENT,
+      'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8',
+    },
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   const text = await response.text()
