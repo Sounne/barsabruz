@@ -22,6 +22,7 @@ const AgendaScreen = ({ onOpenEvent }) => {
     : agendaEvents.filter(event => event.tag === filter)
 
   const byDate = groupEventsByDate(filteredEvents)
+  const emptyAgenda = agendaEvents.length === 0
 
   return (
     <div style={{ paddingBottom: 100 }}>
@@ -63,9 +64,13 @@ const AgendaScreen = ({ onOpenEvent }) => {
             padding: 18,
             boxShadow: 'var(--shadow-card)',
           }}>
-            <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>Aucune soirée pour ce filtre</div>
+            <div className="serif" style={{ fontSize: 20, fontWeight: 600 }}>
+              {emptyAgenda ? 'Aucune soirée prévue' : 'Aucune soirée pour ce filtre'}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--ink-mute)', marginTop: 6 }}>
-              Essaie une autre catégorie pour retrouver les prochains événements des bars.
+              {emptyAgenda
+                ? 'Les prochains événements des bars de Bruz apparaîtront ici dès qu’ils seront annoncés.'
+                : 'Essaie une autre catégorie pour retrouver les prochains événements des bars.'}
             </div>
           </div>
         )}
