@@ -1,0 +1,60 @@
+name: Refresh Events
+
+on:
+  schedule:
+    # GitHub schedules are UTC. Running at both 07:00 and 08:00 UTC lets the
+    # script keep exactly 09:00 Europe/Paris across daylight saving changes.
+    - cron: "0 7 * * 0"
+    - cron: "0 8 * * 0"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Refresh Supabase events
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            echo "Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY repository secret."
+            echo "Add SUPABASE_SERVICE_ROLE_KEY in GitHub > Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            npm run refresh:events -- --require-paris-9
+          else
+            npm run refresh:events
+          fi
+
+      - name: Send failure email
+        if: failure()
+        uses: dawidd6/action-send-mail@v4
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Bars a Bruz - event refresh failed"
+          to: enzo.sounou@live.fr
+          from: ${{ secrets.SMTP_FROM }}
+          body: |
+            The weekly event refresh failed.
+
+            Repository: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
