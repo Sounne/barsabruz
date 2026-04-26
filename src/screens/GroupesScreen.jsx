@@ -288,8 +288,12 @@ const FriendProfileSheet = ({ friend, onClose, onOpenDM, onRemove }) => {
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
           <FriendStat icon="users" label="Groupes en commun" value={sharedGroups.length}/>
-          <FriendStat icon="calendar" label="Sorties créées" value={display.created_sorties_count ?? 0}/>
-          <FriendStat icon="check" label="Participations" value={display.joined_sorties_count ?? 0}/>
+          {display.created_sorties_count !== null && (
+            <FriendStat icon="calendar" label="Sorties créées" value={display.created_sorties_count ?? 0}/>
+          )}
+          {display.joined_sorties_count !== null && (
+            <FriendStat icon="check" label="Participations" value={display.joined_sorties_count ?? 0}/>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

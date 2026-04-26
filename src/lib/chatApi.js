@@ -104,6 +104,7 @@ export async function getFriendProfileSummary(myId, friendId) {
     { data: sharedGroups, error: groupsError },
     { data: createdSorties, error: createdSortiesError },
     { count: joinedSortiesCount, error: joinedSortiesError },
+    { data: privacyRow },
   ] = await Promise.all([
     getProfile(friendId),
     supabase
@@ -127,12 +128,20 @@ export async function getFriendProfileSummary(myId, friendId) {
       .from('annonce_participants')
       .select('annonce_id', { count: 'exact', head: true })
       .eq('user_id', friendId),
+    supabase
+      .from('privacy_preferences')
+      .select('show_stats, share_joined_sorties')
+      .eq('user_id', friendId)
+      .maybeSingle(),
   ])
 
   if (friendshipError) throw friendshipError
   if (groupsError) throw groupsError
   if (createdSortiesError) throw createdSortiesError
   if (joinedSortiesError) throw joinedSortiesError
+
+  const showStats = privacyRow?.show_stats !== false
+  const shareJoinedSorties = privacyRow?.share_joined_sorties !== false
 
   return {
     ...profile,
@@ -146,8 +155,8 @@ export async function getFriendProfileSummary(myId, friendId) {
         joined_at: row.joined_at,
       }))
       .filter(group => group.id),
-    created_sorties_count: createdSorties?.length ?? 0,
-    joined_sorties_count: joinedSortiesCount ?? 0,
+    created_sorties_count: showStats ? (createdSorties?.length ?? 0) : null,
+    joined_sorties_count: (showStats && shareJoinedSorties) ? (joinedSortiesCount ?? 0) : null,
     latest_sorties: (createdSorties ?? []).map(sortie => ({
       ...sortie,
       when: sortie.when_text,
@@ -171,11 +180,16 @@ export function subscribeToProfile(userId, callback) {
 export async function searchUsers(query) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, handle, avatar_letter, avatar_url, color')
+    .select('id, name, handle, avatar_letter, avatar_url, color, priv:privacy_preferences(discoverable)')
     .or(`name.ilike.%${query}%,handle.ilike.%${query}%`)
     .limit(10)
   if (error) throw error
   return data
+    .filter(u => {
+      const p = Array.isArray(u.priv) ? u.priv[0] : u.priv
+      return !p || p.discoverable !== false
+    })
+    .map(({ priv: _priv, ...rest }) => rest)
 }
 
 // ─── GROUPS ─────────────────────────────────────────────────────────────────

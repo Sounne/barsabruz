@@ -113,22 +113,6 @@ const PrivacySettingsSheet = ({ onClose }) => {
         </div>
       ))}
 
-      <div style={{
-        padding: 14, borderRadius: 14,
-        background: 'rgba(198,93,61,0.06)', border: '1px solid rgba(198,93,61,0.18)',
-        display: 'flex', gap: 10,
-      }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-          background: 'rgba(198,93,61,0.14)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon name="lock" size={14} color="var(--terracotta)"/>
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.45 }}>
-          Tes préférences sont sauvegardées sur ton compte. Certains réglages (profil public, recherche, messages) seront appliqués à tous tes appareils prochainement.
-        </div>
-      </div>
     </div>
   )
 }

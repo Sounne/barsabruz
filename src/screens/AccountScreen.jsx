@@ -264,6 +264,12 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
     .length
   const privacyKeys = ['profilePublic', 'discoverable', 'showStats', 'messagesFromAll', 'invitesFromAll', 'shareJoinedSorties']
   const activePrivacyCount = privacyKeys.filter(key => privacySettings?.[key]).length
+  const privacyChips = authUser ? [
+    !privacySettings?.profilePublic && { icon: 'lock', label: 'Profil privé' },
+    !privacySettings?.discoverable && { icon: 'search', label: 'Invisible aux recherches' },
+    !privacySettings?.messagesFromAll && { icon: 'bell', label: 'Messages · amis' },
+    !privacySettings?.invitesFromAll && { icon: 'users', label: 'Invitations · amis' },
+  ].filter(Boolean) : []
 
   const handleSave = async (updates) => {
     await saveProfile(updates)
@@ -325,6 +331,22 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
         {user.bio && (
           <div style={{ marginTop: 12, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
             {user.bio}
+          </div>
+        )}
+
+        {privacyChips.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            {privacyChips.map(chip => (
+              <div key={chip.label} style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '4px 10px', borderRadius: 999,
+                background: 'rgba(42,31,23,0.07)',
+                fontSize: 11, fontWeight: 600, color: 'var(--ink-mute)',
+              }}>
+                <Icon name={chip.icon} size={11} color="var(--ink-mute)"/>
+                {chip.label}
+              </div>
+            ))}
           </div>
         )}
 
