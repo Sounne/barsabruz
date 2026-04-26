@@ -493,9 +493,6 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
         }}>
           {signingOut ? 'Déconnexion…' : 'Se déconnecter'}
         </button>
-        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink-mute)', marginTop: 18 }}>
-          Bars à Bruz · v1.0 · Fait par Enzo
-        </div>
       </div>
 
       {/* Edit profile sheet */}
