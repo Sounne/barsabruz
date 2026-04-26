@@ -25,6 +25,32 @@ function fmtLongDate(iso) {
   })
 }
 
+function useBottomAnchoredScroll(isReady, itemCount) {
+  const scrollRef = React.useRef(null)
+  const didInitialAnchorRef = React.useRef(false)
+
+  React.useLayoutEffect(() => {
+    if (!isReady) return undefined
+
+    const container = scrollRef.current
+    if (!container) return undefined
+
+    if (!didInitialAnchorRef.current) {
+      container.scrollTop = container.scrollHeight
+      const frame = window.requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight
+      })
+      didInitialAnchorRef.current = true
+      return () => window.cancelAnimationFrame(frame)
+    }
+
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    return undefined
+  }, [isReady, itemCount])
+
+  return scrollRef
+}
+
 const FriendStat = ({ icon, label, value }) => (
   <div style={{
     flex: 1,
@@ -949,7 +975,7 @@ const GroupChatScreen = ({ group, onBack, onDelete }) => {
   const [sending, setSending] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
-  const bottomRef = React.useRef(null)
+  const messagesScrollRef = useBottomAnchoredScroll(messages !== null, messages?.length ?? 0)
 
   const isCreator = authUser?.id === group.created_by
 
@@ -980,10 +1006,6 @@ const GroupChatScreen = ({ group, onBack, onDelete }) => {
     })
     return () => chatApi.unsubscribe(ch)
   }, [group.id, authUser?.id])
-
-  React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages?.length])
 
   React.useEffect(() => {
     if (!authUser || messages === null) return
@@ -1076,7 +1098,7 @@ const GroupChatScreen = ({ group, onBack, onDelete }) => {
         </div>
       )}
 
-      <div style={{ flex: 1, padding: '16px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div ref={messagesScrollRef} style={{ flex: 1, padding: '16px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {group.type === 'ephemeral' && (
           <div style={{
             alignSelf: 'center', padding: '8px 14px', borderRadius: 999,
@@ -1139,7 +1161,6 @@ const GroupChatScreen = ({ group, onBack, onDelete }) => {
             </div>
           )
         })}
-        <div ref={bottomRef}/>
       </div>
 
       <ChatInput value={input} onChange={setInput} onSend={send} sending={sending}/>
@@ -1151,10 +1172,10 @@ const GroupChatScreen = ({ group, onBack, onDelete }) => {
 
 const DMChatScreen = ({ friend, onBack }) => {
   const { user: authUser } = useAuth()
-  const [messages, setMessages] = React.useState([])
+  const [messages, setMessages] = React.useState(null)
   const [input, setInput] = React.useState('')
   const [sending, setSending] = React.useState(false)
-  const bottomRef = React.useRef(null)
+  const messagesScrollRef = useBottomAnchoredScroll(messages !== null, messages?.length ?? 0)
 
   React.useEffect(() => {
     if (!authUser) return
@@ -1166,26 +1187,25 @@ const DMChatScreen = ({ friend, onBack }) => {
   React.useEffect(() => {
     if (!authUser) return
     const ch = chatApi.subscribeToDirectMessages(authUser.id, friend.id, msg => {
-      setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+      setMessages(prev => {
+        const current = prev ?? []
+        return current.some(m => m.id === msg.id) ? current : [...current, msg]
+      })
     })
     return () => chatApi.unsubscribe(ch)
   }, [authUser?.id, friend.id])
 
   React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length])
-
-  React.useEffect(() => {
-    if (!authUser) return
+    if (!authUser || messages === null) return
     chatApi.markDirectMessagesRead(friend.id).catch(() => {})
-  }, [authUser?.id, friend.id, messages.length])
+  }, [authUser?.id, friend.id, messages?.length])
 
   const send = async () => {
     if (!input.trim() || !authUser) return
     setSending(true)
     try {
       const msg = await chatApi.sendDirectMessage(authUser.id, friend.id, input.trim())
-      setMessages(prev => [...prev, msg])
+      setMessages(prev => [...(prev ?? []), msg])
       setInput('')
     } catch (err) { console.error(err) }
     finally { setSending(false) }
@@ -1204,13 +1224,16 @@ const DMChatScreen = ({ friend, onBack }) => {
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: '16px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {messages.length === 0 && (
+      <div ref={messagesScrollRef} style={{ flex: 1, padding: '16px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {messages === null && (
+          <div style={{ alignSelf: 'center', color: 'var(--ink-mute)', fontSize: 13, marginTop: 20 }}>Chargement…</div>
+        )}
+        {messages?.length === 0 && (
           <div style={{ alignSelf: 'center', color: 'var(--ink-mute)', fontSize: 13, marginTop: 20 }}>
             Dis bonjour à {friend.name} 👋
           </div>
         )}
-        {messages.map(m => {
+        {(messages ?? []).map(m => {
           const isMe = m.sender_id === authUser?.id
           return (
             <div key={m.id} style={{ display: 'flex', gap: 8, flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
@@ -1235,7 +1258,6 @@ const DMChatScreen = ({ friend, onBack }) => {
             </div>
           )
         })}
-        <div ref={bottomRef}/>
       </div>
 
       <ChatInput value={input} onChange={setInput} onSend={send} sending={sending}/>

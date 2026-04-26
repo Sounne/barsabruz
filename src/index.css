@@ -242,6 +242,11 @@ html, body {
   height: calc(100% - 10px);
 }
 
+.chat-sheet .sheet__panel {
+  height: calc(100% - 10px);
+  overflow: hidden;
+}
+
 .sheet--closing {
   pointer-events: none;
 }

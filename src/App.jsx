@@ -95,7 +95,9 @@ const App = () => {
   const [barSheetClosing, setBarSheetClosing] = React.useState(false)
   const [eventSheet, setEventSheet] = React.useState(null)
   const [groupChat, setGroupChat] = React.useState(null)
+  const [groupChatClosing, setGroupChatClosing] = React.useState(false)
   const [dmChat, setDmChat] = React.useState(null)
+  const [dmChatClosing, setDmChatClosing] = React.useState(false)
   const [newAnnonce, setNewAnnonce] = React.useState(false)
   const [newSortie, setNewSortie] = React.useState(false)
   const [groupsRefreshKey, setGroupsRefreshKey] = React.useState(0)
@@ -188,13 +190,41 @@ const App = () => {
     setBarSheetClosing(false)
   }, [])
 
+  const openGroupChat = React.useCallback((group) => {
+    setGroupChatClosing(false)
+    setGroupChat(group)
+  }, [])
+
+  const closeGroupChat = React.useCallback(() => {
+    setGroupChatClosing(true)
+  }, [])
+
+  const clearGroupChat = React.useCallback(() => {
+    setGroupChat(null)
+    setGroupChatClosing(false)
+  }, [])
+
+  const openDMChat = React.useCallback((friend) => {
+    setDmChatClosing(false)
+    setDmChat(friend)
+  }, [])
+
+  const closeDMChat = React.useCallback(() => {
+    setDmChatClosing(true)
+  }, [])
+
+  const clearDMChat = React.useCallback(() => {
+    setDmChat(null)
+    setDmChatClosing(false)
+  }, [])
+
   if (authLoading) return <LoadingSplash/>
 
   const navigate = {
     openBar: openBarSheet,
     openEvent: (e) => setEventSheet(e),
-    openGroup: (g) => setGroupChat(g),
-    openDM: (friend) => setDmChat(friend),
+    openGroup: openGroupChat,
+    openDM: openDMChat,
     openFriends: () => {
       setSocialTab('amis')
       handleTabChange('groupes')
@@ -226,26 +256,6 @@ const App = () => {
     if (!sortieSheet) return
     deleteAnnonce(sortieSheet.id)
     setSortieSheet(null)
-  }
-
-  if (groupChat) {
-    return (
-      <DeferredScreen>
-        <GroupChatScreen
-          group={groupChat}
-          onBack={() => setGroupChat(null)}
-          onDelete={() => { setGroupChat(null); setGroupsRefreshKey(k => k + 1) }}
-        />
-      </DeferredScreen>
-    )
-  }
-
-  if (dmChat) {
-    return (
-      <DeferredScreen>
-        <DMChatScreen friend={dmChat} onBack={() => setDmChat(null)} />
-      </DeferredScreen>
-    )
   }
 
   return (
@@ -323,6 +333,42 @@ const App = () => {
               onOpenEvent={navigate.openEvent}
               onNewAnnonce={() => setNewAnnonce(true)}
             />
+          </DeferredScreen>
+        </Sheet>
+      )}
+
+      {groupChat && (
+        <Sheet
+          className="chat-sheet"
+          label={`Groupe ${groupChat.name}`}
+          closing={groupChatClosing}
+          onClose={closeGroupChat}
+          onExited={clearGroupChat}
+          panelStyle={{ overflow: 'hidden' }}
+          zIndex={150}
+        >
+          <DeferredScreen>
+            <GroupChatScreen
+              group={groupChat}
+              onBack={closeGroupChat}
+              onDelete={() => setGroupsRefreshKey(k => k + 1)}
+            />
+          </DeferredScreen>
+        </Sheet>
+      )}
+
+      {dmChat && (
+        <Sheet
+          className="chat-sheet"
+          label={`Conversation avec ${dmChat.name}`}
+          closing={dmChatClosing}
+          onClose={closeDMChat}
+          onExited={clearDMChat}
+          panelStyle={{ overflow: 'hidden' }}
+          zIndex={150}
+        >
+          <DeferredScreen>
+            <DMChatScreen friend={dmChat} onBack={closeDMChat} />
           </DeferredScreen>
         </Sheet>
       )}
