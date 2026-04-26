@@ -252,6 +252,11 @@ html, body {
   max-height: 85%;
 }
 
+.sortie-sheet .sheet__panel {
+  height: auto;
+  max-height: 88%;
+}
+
 .sheet--closing {
   pointer-events: none;
 }

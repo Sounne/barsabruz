@@ -1,5 +1,6 @@
 import React from 'react'
 import { Icon, Avatar, BarHero, Tag, OpenDot, shade } from '../components/ui'
+import { Sheet } from '../components/Sheet'
 import { getBarStatus, useCurrentTime } from '../utils/barStatus'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -147,20 +148,19 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [showInvite, setShowInvite] = React.useState(false)
   const [invitedToast, setInvitedToast] = React.useState(null)
+  const [closing, setClosing] = React.useState(false)
+  const requestClose = React.useCallback(() => setClosing(true), [])
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,0.45)',
-      display: 'flex', alignItems: 'flex-end',
-    }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
-        width: '100%', background: 'var(--paper)',
-        borderTopLeftRadius: 28, borderTopRightRadius: 28,
-        maxHeight: '88%', overflow: 'auto',
-        animation: 'slideUp 0.25s',
-      }}>
-        <div style={{ height: 4, background: a.color, borderRadius: '28px 28px 0 0' }}/>
+    <Sheet
+      className="sortie-sheet"
+      label="Détail de la sortie"
+      closing={closing}
+      onClose={requestClose}
+      onExited={onClose}
+      zIndex={200}
+    >
+      <div style={{ height: 4, background: a.color, borderRadius: '28px 28px 0 0' }}/>
         <div style={{ padding: '20px 20px 44px' }}>
 
           {/* Author + close */}
@@ -185,7 +185,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
                   <Icon name="trash" size={15} color="var(--terracotta)"/>
                 </button>
               )}
-              <button onClick={onClose} style={{
+              <button onClick={requestClose} style={{
                 width: 32, height: 32, borderRadius: '50%',
                 background: 'rgba(42,31,23,0.08)', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -365,7 +365,7 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
                     border: '1px solid var(--line)', fontSize: 14, fontWeight: 600,
                     fontFamily: 'inherit', cursor: 'pointer',
                   }}>Garder</button>
-                  <button onClick={() => { onDelete(); onClose() }} style={{
+                  <button onClick={() => { onDelete(); requestClose() }} style={{
                     flex: 1, padding: '12px 0', borderRadius: 12,
                     background: 'var(--terracotta)', color: '#fff',
                     border: 'none', fontSize: 14, fontWeight: 600,
@@ -376,42 +376,27 @@ const SortieDetailSheet = ({ annonce: a, participants, joined, isCreator, authUs
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }
 
 // ═══════════════ HOME SCREEN ═══════════════
 const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavigateTab, onOpenNotifications }) => {
-  const { bars: allBars, agendaEvents, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, deleteAnnonce, joinedAnnonceIds, invitations, acceptInvitation, declineInvitation, unreadNotificationCount } = useData()
+  const { bars: allBars, agendaEvents, annonces: publics, participantsMap, user: userData, joinAnnonce, unjoinAnnonce, joinedAnnonceIds, invitations, acceptInvitation, declineInvitation, unreadNotificationCount } = useData()
   const { user: authUser } = useAuth()
   const [search, setSearch] = React.useState('')
-  const [selectedAnnonce, setSelectedAnnonce] = React.useState(null)
-
-  React.useEffect(() => {
-    if (!selectedAnnonce) return
-    const current = publics.find(a => a.id === selectedAnnonce.id)
-    setSelectedAnnonce(current ?? null)
-  }, [publics, selectedAnnonce?.id])
 
   const handleJoin = (annonceId, currentAttending) => {
     const a = publics.find(x => x.id === annonceId)
     const participantCount = getParticipantCount(a?.attending ?? 0, (participantsMap[annonceId] ?? []).length)
     if (!authUser || joinedAnnonceIds.has(annonceId) || (a && participantCount >= a.maxAttending)) return
     joinAnnonce(annonceId, currentAttending)
-    // Keep selectedAnnonce in sync
-    setSelectedAnnonce(prev => prev?.id === annonceId ? { ...prev, attending: prev.attending + 1 } : prev)
   }
 
   const handleUnjoin = (annonceId) => {
     unjoinAnnonce(annonceId)
-    setSelectedAnnonce(prev => prev?.id === annonceId ? { ...prev, attending: Math.max(0, prev.attending - 1) } : prev)
   }
 
-  const handleDelete = (annonceId) => {
-    deleteAnnonce(annonceId)
-    setSelectedAnnonce(null)
-  }
   const enrichAnnonce = (a) =>
     authUser && a.user_id === authUser.id
       ? { ...a, avatar_url: userData?.avatarUrl ?? a.avatar_url, avatar: userData?.avatar ?? a.avatar }
@@ -675,7 +660,7 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
             const canUnjoin = authUser && hasJoined && !isCreator
 
             return (
-              <div key={a.id} onClick={() => setSelectedAnnonce(a)} style={{
+              <div key={a.id} onClick={() => onOpenAnnonce(a)} style={{
                 background: '#fff', borderRadius: 16, padding: 14,
                 boxShadow: 'var(--shadow-card)',
                 borderLeft: `3px solid ${a.color}`,
@@ -733,20 +718,6 @@ const HomeScreen = ({ onOpenBar, onOpenEvent, onOpenAnnonce, onNewSortie, onNavi
         </div>
       )}
 
-      {/* Sortie detail sheet */}
-      {selectedAnnonce && (
-        <SortieDetailSheet
-          annonce={selectedAnnonce}
-          participants={participantsMap[selectedAnnonce.id] ?? []}
-          joined={joinedAnnonceIds.has(selectedAnnonce.id)}
-          isCreator={!!(authUser && selectedAnnonce.user_id === authUser.id)}
-          authUser={authUser}
-          onJoin={() => handleJoin(selectedAnnonce.id, selectedAnnonce.attending)}
-          onUnjoin={() => handleUnjoin(selectedAnnonce.id)}
-          onDelete={() => handleDelete(selectedAnnonce.id)}
-          onClose={() => setSelectedAnnonce(null)}
-        />
-      )}
     </div>
   );
 };
