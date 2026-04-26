@@ -238,6 +238,100 @@ const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
   </div>
 )
 
+// ─────────── SHADER BANNER ───────────
+const ShaderBanner = ({ color = '#C65D3D', height = 160 }) => {
+  const canvasRef = React.useRef(null)
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const gl = canvas.getContext('webgl', { antialias: false, powerPreference: 'low-power' })
+    if (!gl) return
+
+    const vs = `attribute vec2 a;void main(){gl_Position=vec4(a,0,1);}`
+    const fs = `
+      precision mediump float;
+      uniform float T;
+      uniform vec2 R;
+      uniform vec3 C;
+      void main(){
+        vec2 p=gl_FragCoord.xy/R;
+        float t=T*0.35;
+        float a=sin(p.x*4.0+t+sin(p.y*3.0+t*0.7)*1.5);
+        float b=sin(p.y*5.0-t*0.9+sin(p.x*3.5+t*0.5)*1.2);
+        float c=sin((p.x+p.y)*3.5+t*0.6);
+        float d=sin(length(p-0.5)*7.0-t*1.1);
+        float v=(a+b+c+d)*0.25;
+        vec3 dark=C*0.52;
+        vec3 lite=min(C*1.35+0.1,vec3(1.0));
+        vec3 col=mix(dark,C,smoothstep(-0.5,0.1,v));
+        col=mix(col,lite,smoothstep(0.1,0.75,v)*0.45);
+        gl_FragColor=vec4(col,1.0);
+      }
+    `
+
+    const mkShader = (type, src) => {
+      const s = gl.createShader(type)
+      gl.shaderSource(s, src)
+      gl.compileShader(s)
+      return s
+    }
+    const prog = gl.createProgram()
+    gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, vs))
+    gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, fs))
+    gl.linkProgram(prog)
+    gl.useProgram(prog)
+
+    const buf = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW)
+    const aLoc = gl.getAttribLocation(prog, 'a')
+    gl.enableVertexAttribArray(aLoc)
+    gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0)
+
+    const uT = gl.getUniformLocation(prog, 'T')
+    const uR = gl.getUniformLocation(prog, 'R')
+    const uC = gl.getUniformLocation(prog, 'C')
+
+    const hex = (color || '#C65D3D').replace('#', '')
+    gl.uniform3f(uC,
+      parseInt(hex.slice(0,2),16)/255,
+      parseInt(hex.slice(2,4),16)/255,
+      parseInt(hex.slice(4,6),16)/255,
+    )
+
+    const resize = () => {
+      const w = Math.floor(canvas.clientWidth)
+      const h = Math.floor(canvas.clientHeight)
+      if (canvas.width === w && canvas.height === h) return
+      canvas.width = w
+      canvas.height = h
+      gl.viewport(0, 0, w, h)
+      gl.uniform2f(uR, w, h)
+    }
+    resize()
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+
+    let raf
+    const t0 = performance.now()
+    const draw = () => {
+      gl.uniform1f(uT, (performance.now() - t0) / 1000)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+      raf = requestAnimationFrame(draw)
+    }
+    draw()
+
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+      gl.deleteProgram(prog)
+    }
+  }, [color])
+
+  return <canvas ref={canvasRef} style={{ width: '100%', height, display: 'block' }} />
+}
+
 // ─────────── ACCOUNT SCREEN ───────────
 const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriends, onOpenPrivacySettings }) => {
   const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, notificationSettings, privacySettings } = useData()
@@ -287,20 +381,7 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
   return (
     <div style={{ paddingBottom: 100 }}>
       {/* Banner */}
-      <div style={{
-        height: 160,
-        background: `linear-gradient(135deg, ${user.color}, ${shade(user.color, 20)})`,
-        position: 'relative', overflow: 'hidden',
-      }}>
-        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }}>
-          <defs>
-            <pattern id="accountDots" width="16" height="16" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="#fff"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#accountDots)"/>
-        </svg>
-      </div>
+      <ShaderBanner color={user.color} height={160} />
 
       {/* Profile card */}
       <div style={{
