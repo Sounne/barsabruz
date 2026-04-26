@@ -100,6 +100,14 @@ export function DataProvider({ children }) {
     groups: true,
     browser: false,
   })
+  const [privacySettings, setPrivacySettings] = React.useState({
+    profilePublic: true,
+    discoverable: true,
+    showStats: true,
+    messagesFromAll: true,
+    invitesFromAll: true,
+    shareJoinedSorties: true,
+  })
   const [notificationPermission, setNotificationPermission] = React.useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   )
@@ -113,6 +121,7 @@ export function DataProvider({ children }) {
   const [loading, setLoading] = React.useState(true)
   const skipNotificationWriteRef = React.useRef(true)
   const skipNotificationSettingsWriteRef = React.useRef(true)
+  const skipPrivacyWriteRef = React.useRef(true)
 
   const notificationStorageKey = React.useMemo(
     () => `barsabruz:notifications:${user?.id ?? 'guest'}`,
@@ -121,6 +130,11 @@ export function DataProvider({ children }) {
 
   const notificationSettingsKey = React.useMemo(
     () => `barsabruz:notification-settings:${user?.id ?? 'guest'}`,
+    [user?.id]
+  )
+
+  const privacySettingsKey = React.useMemo(
+    () => `barsabruz:privacy-settings:${user?.id ?? 'guest'}`,
     [user?.id]
   )
 
@@ -290,6 +304,7 @@ export function DataProvider({ children }) {
   React.useEffect(() => {
     skipNotificationWriteRef.current = true
     skipNotificationSettingsWriteRef.current = true
+    skipPrivacyWriteRef.current = true
     const state = readStorage(notificationStorageKey, { read: [], dismissed: [] })
     setNotificationReadIds(new Set(state.read ?? []))
     setNotificationDismissedIds(new Set(state.dismissed ?? []))
@@ -297,7 +312,11 @@ export function DataProvider({ children }) {
       ...prev,
       ...readStorage(notificationSettingsKey, {}),
     }))
-  }, [notificationStorageKey, notificationSettingsKey, readStorage])
+    setPrivacySettings(prev => ({
+      ...prev,
+      ...readStorage(privacySettingsKey, {}),
+    }))
+  }, [notificationStorageKey, notificationSettingsKey, privacySettingsKey, readStorage])
 
   React.useEffect(() => {
     if (skipNotificationWriteRef.current) {
@@ -317,6 +336,18 @@ export function DataProvider({ children }) {
     }
     writeStorage(notificationSettingsKey, notificationSettings)
   }, [notificationSettingsKey, notificationSettings, writeStorage])
+
+  React.useEffect(() => {
+    if (skipPrivacyWriteRef.current) {
+      skipPrivacyWriteRef.current = false
+      return
+    }
+    writeStorage(privacySettingsKey, privacySettings)
+  }, [privacySettingsKey, privacySettings, writeStorage])
+
+  const updatePrivacySetting = React.useCallback((key, value) => {
+    setPrivacySettings(prev => ({ ...prev, [key]: value }))
+  }, [])
 
   React.useEffect(() => {
     if (!user) {
@@ -964,6 +995,8 @@ export function DataProvider({ children }) {
     notificationSettings,
     notificationPermission,
     webPushStatus,
+    privacySettings,
+    updatePrivacySetting,
     markNotificationRead,
     markAllNotificationsRead,
     dismissNotification,

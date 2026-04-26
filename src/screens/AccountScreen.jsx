@@ -239,8 +239,8 @@ const AnnonceCard = ({ annonce: a, onOpen, badge }) => (
 )
 
 // ─────────── ACCOUNT SCREEN ───────────
-const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriends }) => {
-  const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, notificationSettings } = useData()
+const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriends, onOpenPrivacySettings }) => {
+  const { user, annonces, saveProfile, joinedAnnonceIds, myGroups, friends, notificationSettings, privacySettings } = useData()
   const { user: authUser } = useAuth()
   const [editing, setEditing] = React.useState(false)
   const [sortiesExpanded, setSortiesExpanded] = React.useState(false)
@@ -262,6 +262,8 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
   const activeNotificationCount = ['messages', 'groups', 'events']
     .filter(key => notificationSettings[key])
     .length
+  const privacyKeys = ['profilePublic', 'discoverable', 'showStats', 'messagesFromAll', 'invitesFromAll', 'shareJoinedSorties']
+  const activePrivacyCount = privacyKeys.filter(key => privacySettings?.[key]).length
 
   const handleSave = async (updates) => {
     await saveProfile(updates)
@@ -423,7 +425,13 @@ const AccountScreen = ({ onOpenAnnonce, onOpenNotificationSettings, onOpenFriend
               active: true,
             },
             { icon: 'users', label: 'Mes amis', detail: String(friends.length), onClick: onOpenFriends, active: true },
-            { icon: 'lock', label: 'Confidentialité', detail: '' },
+            {
+              icon: 'lock',
+              label: 'Confidentialité',
+              detail: `${activePrivacyCount}/${privacyKeys.length} actives`,
+              onClick: onOpenPrivacySettings,
+              active: true,
+            },
           ].map((row, i, arr) => (
             <div key={row.label} onClick={row.onClick} style={{
               display: 'flex', alignItems: 'center', gap: 12,

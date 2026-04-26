@@ -53,6 +53,10 @@ const NotificationSettingsSheet = React.lazy(() =>
   import('./screens/NotificationsSheet').then((module) => ({ default: module.NotificationSettingsSheet })),
 )
 
+const PrivacySettingsSheet = React.lazy(() =>
+  import('./screens/PrivacySettingsSheet').then((module) => ({ default: module.PrivacySettingsSheet })),
+)
+
 // ─────────── LOADING SPLASH ───────────
 const LoadingSplash = () => (
   <div style={{
@@ -105,6 +109,7 @@ const App = () => {
   const [sortieSheet, setSortieSheet] = React.useState(null)
   const [notificationsOpen, setNotificationsOpen] = React.useState(false)
   const [notificationSettingsOpen, setNotificationSettingsOpen] = React.useState(false)
+  const [privacySettingsOpen, setPrivacySettingsOpen] = React.useState(false)
   const [pullDistance, setPullDistance] = React.useState(0)
   const [pullRefreshing, setPullRefreshing] = React.useState(false)
   const pullStartY = React.useRef(null)
@@ -253,6 +258,10 @@ const App = () => {
       if (!isLoggedIn) return
       setNotificationSettingsOpen(true)
     },
+    openPrivacySettings: () => {
+      if (!isLoggedIn) return
+      setPrivacySettingsOpen(true)
+    },
   }
 
   const handleSortieJoin = () => {
@@ -324,6 +333,7 @@ const App = () => {
               onOpenAnnonce={navigate.openAnnonce}
               onOpenNotificationSettings={navigate.openNotificationSettings}
               onOpenFriends={navigate.openFriends}
+              onOpenPrivacySettings={navigate.openPrivacySettings}
             />
           </DeferredScreen>
         ) : (
@@ -465,6 +475,12 @@ const App = () => {
       {isLoggedIn && notificationSettingsOpen && (
         <DeferredScreen>
           <NotificationSettingsSheet onClose={() => setNotificationSettingsOpen(false)} />
+        </DeferredScreen>
+      )}
+
+      {isLoggedIn && privacySettingsOpen && (
+        <DeferredScreen>
+          <PrivacySettingsSheet onClose={() => setPrivacySettingsOpen(false)} />
         </DeferredScreen>
       )}
 
